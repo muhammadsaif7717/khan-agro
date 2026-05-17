@@ -1,6 +1,6 @@
 "use client";
 
-import React, {
+import  {
   createContext,
   useContext,
   useState,
@@ -41,7 +41,6 @@ interface AppContextValue {
   isDbConnected: boolean | null;
   isLoading: boolean;
   lastSaved: string;
-  saveStatus: string;
 
   // CRUD helpers
   addItem: (type: keyof FarmData, text: string, amount: number, date: string) => Promise<void>;
@@ -67,7 +66,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [isDbConnected, setIsDbConnected] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [lastSaved, setLastSaved] = useState("");
-  const [saveStatus, setSaveStatus] = useState("✅ DB Auto");
+
 
   const [theme, setTheme] = useState<"light" | "dark">("dark");
 
@@ -225,10 +224,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [income, expense, donation, withdraw, investment]
   );
 
-  const triggerSave = () => {
-    setSaveStatus("💾 DB Saved!");
-    setTimeout(() => setSaveStatus("✅ DB Auto"), 3000);
-  };
+
 
   // ── Initial load ───────────────────────────────────────────────────────────
   useEffect(() => {
@@ -269,7 +265,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!isAuthenticated) return;
     const id = setInterval(async () => {
       await saveAllData();
-      triggerSave();
     }, 2 * 60 * 1000);
     return () => clearInterval(id);
   }, [isAuthenticated, saveAllData]);
@@ -319,7 +314,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       else if (type === "investment") { inv = [...investment, item]; setInvestment(inv); }
 
       await saveAllData(inc, exp, don, wth, inv);
-      triggerSave();
+
     },
     [income, expense, donation, withdraw, investment, saveAllData]
   );
@@ -335,7 +330,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       else if (type === "investment") { inv = investment.filter((_, i) => i !== index); setInvestment(inv); }
 
       await saveAllData(inc, exp, don, wth, inv);
-      triggerSave();
+     
     },
     [income, expense, donation, withdraw, investment, saveAllData]
   );
@@ -415,7 +410,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         Array.isArray(d.withdraw) ? d.withdraw : withdraw,
         Array.isArray(d.investment) ? d.investment : investment
       );
-      triggerSave();
+      
       return { ok: true, msg: "✅ ব্যাকআপ রিস্টোর সফল হয়েছে!" };
     } catch {
       return { ok: false, msg: "❌ JSON ফরম্যাট সঠিক নয়!" };
@@ -429,7 +424,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         theme, toggleTheme,
         language, setLanguage, t,
         income, expense, donation, withdraw, investment,
-        isDbConnected, isLoading, lastSaved, saveStatus,
+        isDbConnected, isLoading, lastSaved,
         addItem, deleteItem,
         changeUsername, changePassword, exportBackup, importBackup
       }}
