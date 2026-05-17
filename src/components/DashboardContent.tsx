@@ -9,7 +9,12 @@ import {
   PieChart, 
   Scale, 
   Database, 
-  Calendar 
+  Calendar,
+  TrendingUp,
+  TrendingDown,
+  Gift,
+  Landmark,
+  Briefcase
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -20,6 +25,34 @@ interface TooltipState {
   x: number;
   y: number;
 }
+
+const BADGE_MAP = {
+  navIncome: {
+    icon: TrendingUp,
+    badgeClass: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+    textClass: "text-emerald-400",
+  },
+  navExpense: {
+    icon: TrendingDown,
+    badgeClass: "text-red-400 bg-red-500/10 border-red-500/20",
+    textClass: "text-red-400",
+  },
+  navDonation: {
+    icon: Gift,
+    badgeClass: "text-orange-400 bg-orange-500/10 border-orange-500/20",
+    textClass: "text-orange-400",
+  },
+  navWithdraw: {
+    icon: Landmark,
+    badgeClass: "text-cyan-400 bg-cyan-500/10 border-cyan-500/20",
+    textClass: "text-cyan-400",
+  },
+  navInvestment: {
+    icon: Briefcase,
+    badgeClass: "text-purple-400 bg-purple-500/10 border-purple-500/20",
+    textClass: "text-purple-400",
+  },
+};
 
 export default function DashboardContent() {
   const {
@@ -211,24 +244,31 @@ export default function DashboardContent() {
           </CardHeader>
           <CardContent className="flex-1 flex flex-col justify-between">
             <div className="space-y-3">
-              {recentTransactions.map((item, idx) => (
-                <div key={idx} className="flex justify-between items-center py-2 border-b border-slate-800/40 last:border-0 hover:translate-x-1 transition-transform duration-200">
-                  <div>
-                    <p className="font-bold text-xs text-slate-200 flex items-center gap-1.5">
-                      <span className={`inline-block text-[9px] font-black px-1.5 py-0.5 rounded-md ${item.colorClass}`}>
-                        {t(item.typeKey)}
-                      </span>
-                      {item.text}
-                    </p>
-                    <p className="text-[10px] text-slate-400 mt-1 flex items-center gap-1 font-semibold">
-                      <Calendar className="w-3 h-3" /> {item.date}
-                    </p>
+              {recentTransactions.map((item, idx) => {
+                const config = BADGE_MAP[item.typeKey];
+                const Icon = config.icon;
+                return (
+                  <div key={idx} className="flex justify-between items-center py-2.5 border-b border-slate-800/40 last:border-0 hover:translate-x-1 transition-transform duration-200 group">
+                    <div className="flex items-center gap-2.5">
+                      <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full border text-[9px] font-black uppercase tracking-wider ${config.badgeClass}`}>
+                        <Icon className="w-3.5 h-3.5 shrink-0" />
+                        <span>{t(item.typeKey)}</span>
+                      </div>
+                      <div>
+                        <p className="font-bold text-xs text-slate-200 group-hover:text-white transition-colors">
+                          {item.text}
+                        </p>
+                        <p className="text-[9px] text-slate-400 mt-0.5 flex items-center gap-1 font-semibold">
+                          <Calendar className="w-3 h-3 text-slate-500" /> {item.date}
+                        </p>
+                      </div>
+                    </div>
+                    <span className={`font-black text-xs ${config.textClass} ml-3 shrink-0`}>
+                      {t("takaSymbol")} {item.amount.toLocaleString()}
+                    </span>
                   </div>
-                  <span className={`font-black text-xs ${item.colorClass.split(" ")[0]} ml-3 shrink-0`}>
-                    {t("takaSymbol")} {item.amount.toLocaleString()}
-                  </span>
-                </div>
-              ))}
+                );
+              })}
               {recentTransactions.length === 0 && (
                 <p className="text-center text-slate-500 text-xs py-12">{t("noTransactions")}</p>
               )}

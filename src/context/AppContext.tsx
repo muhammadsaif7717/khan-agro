@@ -70,7 +70,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const [theme, setTheme] = useState<"light" | "dark">("dark");
 
-  const [language, setLanguageState] = useState<Language>("bn");
+  const [language, setLanguageState] = useState<Language>("en");
 
   // ── Initialize Language ───────────────────────────────────────────────────
   useEffect(() => {
@@ -78,7 +78,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (storedLang && (storedLang === "bn" || storedLang === "en")) {
       setLanguageState(storedLang);
     } else {
-      localStorage.setItem("language", "bn");
+      localStorage.setItem("language", "en");
     }
   }, []);
 
