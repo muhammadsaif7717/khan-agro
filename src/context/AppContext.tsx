@@ -1,0 +1,448 @@
+"use client";
+
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  ReactNode,
+} from "react";
+import { RecordItem, FarmData } from "@/lib/types";
+import { usePathname, useRouter } from "next/navigation";
+import { Language, TranslationKey, translations } from "@/lib/translations";
+
+// ─── Context Shape ────────────────────────────────────────────────────────────
+
+interface AppContextValue {
+  // Auth
+  isAuthenticated: boolean;
+  setIsAuthenticated: (val: boolean) => void;
+  login: (username: string, password: string) => Promise<boolean>;
+  logout: () => void;
+
+  // Theme
+  theme: "light" | "dark";
+  toggleTheme: () => void;
+
+  // i18n
+  language: Language;
+  setLanguage: (lang: Language) => void;
+  t: (key: TranslationKey, params?: Record<string, string | number>) => string;
+
+  // Data
+  income: RecordItem[];
+  expense: RecordItem[];
+  donation: RecordItem[];
+  withdraw: RecordItem[];
+  investment: RecordItem[];
+
+  // DB status
+  isDbConnected: boolean | null;
+  isLoading: boolean;
+  lastSaved: string;
+  saveStatus: string;
+
+  // CRUD helpers
+  addItem: (type: keyof FarmData, text: string, amount: number, date: string) => Promise<void>;
+  deleteItem: (type: keyof FarmData, index: number) => Promise<void>;
+  // Settings & Backup
+  changeUsername: (newUser: string, pass: string) => Promise<{ ok: boolean; msg: string }>;
+  changePassword: (oldPass: string, newPass: string, confirmNewPass: string) => Promise<{ ok: boolean; msg: string }>;
+  exportBackup: () => void;
+  importBackup: (jsonText: string) => Promise<{ ok: boolean; msg: string }>;
+}
+
+const AppContext = createContext<AppContextValue | null>(null);
+
+// ─── Provider ─────────────────────────────────────────────────────────────────
+
+export function AppProvider({ children }: { children: ReactNode }) {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [income, setIncome] = useState<RecordItem[]>([]);
+  const [expense, setExpense] = useState<RecordItem[]>([]);
+  const [donation, setDonation] = useState<RecordItem[]>([]);
+  const [withdraw, setWithdraw] = useState<RecordItem[]>([]);
+  const [investment, setInvestment] = useState<RecordItem[]>([]);
+  const [isDbConnected, setIsDbConnected] = useState<boolean | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [lastSaved, setLastSaved] = useState("");
+  const [saveStatus, setSaveStatus] = useState("✅ DB Auto");
+
+  const [theme, setTheme] = useState<"light" | "dark">("dark");
+
+  const [language, setLanguageState] = useState<Language>("bn");
+
+  // ── Initialize Language ───────────────────────────────────────────────────
+  useEffect(() => {
+    const storedLang = localStorage.getItem("language") as Language;
+    if (storedLang && (storedLang === "bn" || storedLang === "en")) {
+      setLanguageState(storedLang);
+    } else {
+      localStorage.setItem("language", "bn");
+    }
+  }, []);
+
+  const setLanguage = useCallback((lang: Language) => {
+    setLanguageState(lang);
+    localStorage.setItem("language", lang);
+  }, []);
+
+  const t = useCallback(
+    (key: TranslationKey, params?: Record<string, string | number>): string => {
+      const langTrans = translations[language] || translations.bn;
+      let text = langTrans[key] || translations.bn[key] || (key as string);
+      if (params) {
+        Object.entries(params).forEach(([k, v]) => {
+          text = text.replace(`{${k}}`, String(v));
+        });
+      }
+      return text;
+    },
+    [language]
+  );
+
+  // ── Initialize Theme ───────────────────────────────────────────────────────
+  useEffect(() => {
+    const storedTheme = localStorage.getItem("theme") as "light" | "dark";
+    if (storedTheme) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setTheme(storedTheme);
+      if (storedTheme === "light") {
+        document.documentElement.classList.add("light");
+        document.documentElement.classList.remove("dark");
+      } else {
+        document.documentElement.classList.add("dark");
+        document.documentElement.classList.remove("light");
+      }
+    } else {
+      localStorage.setItem("theme", "dark");
+      document.documentElement.classList.add("dark");
+      document.documentElement.classList.remove("light");
+    }
+  }, []);
+
+  const toggleTheme = useCallback(() => {
+    setTheme((prev) => {
+      const next = prev === "dark" ? "light" : "dark";
+      localStorage.setItem("theme", next);
+      if (next === "light") {
+        document.documentElement.classList.add("light");
+        document.documentElement.classList.remove("dark");
+      } else {
+        document.documentElement.classList.add("dark");
+        document.documentElement.classList.remove("light");
+      }
+      return next;
+    });
+  }, []);
+
+  const pathname = usePathname();
+  const router = useRouter();
+
+  // ── Verify Credentials ─────────────────────────────────────────────────────
+  const verifyCredentials = useCallback(async (currentPath: string) => {
+    const isLoginPage = currentPath === "/login";
+
+    const handleAuthFailure = async () => {
+      try {
+        await fetch("/api/logout", { method: "POST" });
+      } catch {}
+      document.cookie = "auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+      localStorage.removeItem("auth_hashes");
+      setIsAuthenticated(false);
+      if (!isLoginPage) {
+        router.replace("/login");
+      }
+    };
+
+    const storedHashes = localStorage.getItem("auth_hashes");
+    if (!storedHashes) {
+      if (!isLoginPage) {
+        await handleAuthFailure();
+      }
+      return false;
+    }
+
+    try {
+      const hashes = JSON.parse(storedHashes);
+      const verifyRes = await fetch("/api/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          hashedUsername: hashes.username, 
+          hashedPassword: hashes.password 
+        }),
+      });
+
+      if (verifyRes.ok) {
+        const data = await verifyRes.json();
+        if (data.authenticated) {
+          setIsAuthenticated(true);
+          if (isLoginPage) {
+            router.replace("/");
+          }
+          return true;
+        } else {
+          await handleAuthFailure();
+          return false;
+        }
+      } else {
+        await handleAuthFailure();
+        return false;
+      }
+    } catch {
+      await handleAuthFailure();
+      return false;
+    }
+  }, [router]);
+
+  // ── Save all data to MongoDB ───────────────────────────────────────────────
+  const saveAllData = useCallback(
+    async (
+      inc: RecordItem[] = income,
+      exp: RecordItem[] = expense,
+      don: RecordItem[] = donation,
+      wth: RecordItem[] = withdraw,
+      inv: RecordItem[] = investment
+    ) => {
+      try {
+        const res = await fetch("/api/records", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ income: inc, expense: exp, donation: don, withdraw: wth, investment: inv }),
+        });
+        if (res.ok) {
+          setIsDbConnected(true);
+          setLastSaved(new Date().toLocaleString("bn-BD"));
+        } else {
+          setIsDbConnected(false);
+        }
+      } catch {
+        setIsDbConnected(false);
+      }
+    },
+    [income, expense, donation, withdraw, investment]
+  );
+
+  const triggerSave = () => {
+    setSaveStatus("💾 DB Saved!");
+    setTimeout(() => setSaveStatus("✅ DB Auto"), 3000);
+  };
+
+  // ── Initial load ───────────────────────────────────────────────────────────
+  useEffect(() => {
+    const init = async () => {
+      setIsLoading(true);
+      try {
+        const dataRes = await fetch("/api/records");
+        if (dataRes.ok) {
+          const d = await dataRes.json();
+          if (d.income) setIncome(d.income);
+          if (d.expense) setExpense(d.expense);
+          if (d.donation) setDonation(d.donation);
+          if (d.withdraw) setWithdraw(d.withdraw);
+          if (d.investment) setInvestment(d.investment);
+          setIsDbConnected(!d.dbOffline);
+          if (!d.dbOffline) setLastSaved(new Date().toLocaleString("bn-BD"));
+        }
+      } catch {
+        setIsDbConnected(false);
+      }
+
+      await verifyCredentials(window.location.pathname);
+      setIsLoading(false);
+    };
+    init();
+  }, [verifyCredentials]);
+
+  // ── Check credentials on subsequent route visits ────────────────────────────
+  useEffect(() => {
+    if (!isLoading) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      verifyCredentials(pathname);
+    }
+  }, [pathname, isLoading, verifyCredentials]);
+
+  // ── Autosave every 2 minutes ───────────────────────────────────────────────
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const id = setInterval(async () => {
+      await saveAllData();
+      triggerSave();
+    }, 2 * 60 * 1000);
+    return () => clearInterval(id);
+  }, [isAuthenticated, saveAllData]);
+
+  // ── Auth ───────────────────────────────────────────────────────────────────
+  const login = useCallback(
+    async (username: string, password: string): Promise<boolean> => {
+      try {
+        const res = await fetch("/api/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: username.trim(), password }),
+        });
+        const data = await res.json();
+        
+        if (data.success && data.hashes) {
+          localStorage.setItem("auth_hashes", JSON.stringify(data.hashes));
+          setIsAuthenticated(true);
+          return true;
+        }
+      } catch (err) {
+        console.error("Login Error:", err);
+      }
+      return false;
+    },
+    []
+  );
+
+  const logout = useCallback(async () => {
+    try {
+      await fetch("/api/logout", { method: "POST" });
+    } catch {}
+    localStorage.removeItem("auth_hashes");
+    setIsAuthenticated(false);
+  }, []);
+
+  // ── CRUD ───────────────────────────────────────────────────────────────────
+  const addItem = useCallback(
+    async (type: keyof FarmData, text: string, amount: number, date: string) => {
+      const item: RecordItem = { text: text.trim(), amount, date };
+      let inc = income, exp = expense, don = donation, wth = withdraw, inv = investment;
+
+      if (type === "income") { inc = [...income, item]; setIncome(inc); }
+      else if (type === "expense") { exp = [...expense, item]; setExpense(exp); }
+      else if (type === "donation") { don = [...donation, item]; setDonation(don); }
+      else if (type === "withdraw") { wth = [...withdraw, item]; setWithdraw(wth); }
+      else if (type === "investment") { inv = [...investment, item]; setInvestment(inv); }
+
+      await saveAllData(inc, exp, don, wth, inv);
+      triggerSave();
+    },
+    [income, expense, donation, withdraw, investment, saveAllData]
+  );
+
+  const deleteItem = useCallback(
+    async (type: keyof FarmData, index: number) => {
+      let inc = income, exp = expense, don = donation, wth = withdraw, inv = investment;
+
+      if (type === "income") { inc = income.filter((_, i) => i !== index); setIncome(inc); }
+      else if (type === "expense") { exp = expense.filter((_, i) => i !== index); setExpense(exp); }
+      else if (type === "donation") { don = donation.filter((_, i) => i !== index); setDonation(don); }
+      else if (type === "withdraw") { wth = withdraw.filter((_, i) => i !== index); setWithdraw(wth); }
+      else if (type === "investment") { inv = investment.filter((_, i) => i !== index); setInvestment(inv); }
+
+      await saveAllData(inc, exp, don, wth, inv);
+      triggerSave();
+    },
+    [income, expense, donation, withdraw, investment, saveAllData]
+  );
+
+  // ── Settings & Credentials ──────────────────────────────────────────────────
+  const changeUsername = async (newUser: string, pass: string) => {
+    if (!pass) return { ok: false, msg: "❌ বর্তমান পাসওয়ার্ড আবশ্যক!" };
+    if (!newUser.trim() || newUser.length < 3) return { ok: false, msg: "❌ ইউজারনেম কমপক্ষে ৩ অক্ষরের হতে হবে!" };
+
+    try {
+      const res = await fetch("/api/credentials", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ newUsername: newUser.trim(), oldPassword: pass }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        if (data.hashes) localStorage.setItem("auth_hashes", JSON.stringify(data.hashes));
+        return { ok: true, msg: "✅ ইউজারনেম পরিবর্তন সফল হয়েছে!" };
+      } else {
+        return { ok: false, msg: data.error || "❌ সার্ভার এরর!" };
+      }
+    } catch {
+      return { ok: false, msg: "❌ নেটওয়ার্ক এরর!" };
+    }
+  };
+
+  const changePassword = async (oldPass: string, newPass: string, confirmNewPass: string) => {
+    if (!oldPass) return { ok: false, msg: "❌ বর্তমান পাসওয়ার্ড আবশ্যক!" };
+    if (newPass !== confirmNewPass) return { ok: false, msg: "❌ নতুন পাসওয়ার্ড মিলছে না!" };
+    if (newPass.length < 4) return { ok: false, msg: "❌ পাসওয়ার্ড কমপক্ষে ৪ অক্ষরের হতে হবে!" };
+
+    try {
+      const res = await fetch("/api/credentials", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ newPassword: newPass, oldPassword: oldPass }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        if (data.hashes) localStorage.setItem("auth_hashes", JSON.stringify(data.hashes));
+        return { ok: true, msg: "✅ পাসওয়ার্ড পরিবর্তন সফল হয়েছে!" };
+      } else {
+        return { ok: false, msg: data.error || "❌ সার্ভার এরর!" };
+      }
+    } catch {
+      return { ok: false, msg: "❌ নেটওয়ার্ক এরর!" };
+    }
+  };
+
+  // ── Backup ─────────────────────────────────────────────────────────────────
+  const exportBackup = useCallback(() => {
+    const data = { income, expense, donation, withdraw, investment };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `khan_agro_backup_${new Date().toISOString().split("T")[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }, [income, expense, donation, withdraw, investment]);
+
+  const importBackup = async (jsonText: string) => {
+    try {
+      const d = JSON.parse(jsonText);
+      if (Array.isArray(d.income)) setIncome(d.income);
+      if (Array.isArray(d.expense)) setExpense(d.expense);
+      if (Array.isArray(d.donation)) setDonation(d.donation);
+      if (Array.isArray(d.withdraw)) setWithdraw(d.withdraw);
+      if (Array.isArray(d.investment)) setInvestment(d.investment);
+      
+      await saveAllData(
+        Array.isArray(d.income) ? d.income : income,
+        Array.isArray(d.expense) ? d.expense : expense,
+        Array.isArray(d.donation) ? d.donation : donation,
+        Array.isArray(d.withdraw) ? d.withdraw : withdraw,
+        Array.isArray(d.investment) ? d.investment : investment
+      );
+      triggerSave();
+      return { ok: true, msg: "✅ ব্যাকআপ রিস্টোর সফল হয়েছে!" };
+    } catch {
+      return { ok: false, msg: "❌ JSON ফরম্যাট সঠিক নয়!" };
+    }
+  };
+
+  return (
+    <AppContext.Provider
+      value={{
+        isAuthenticated, setIsAuthenticated, login, logout,
+        theme, toggleTheme,
+        language, setLanguage, t,
+        income, expense, donation, withdraw, investment,
+        isDbConnected, isLoading, lastSaved, saveStatus,
+        addItem, deleteItem,
+        changeUsername, changePassword, exportBackup, importBackup
+      }}
+    >
+      {children}
+    </AppContext.Provider>
+  );
+}
+
+// ─── Hook ──────────────────────────────────────────────────────────────────────
+
+export function useApp(): AppContextValue {
+  const ctx = useContext(AppContext);
+  if (!ctx) throw new Error("useApp must be used within AppProvider");
+  return ctx;
+}
