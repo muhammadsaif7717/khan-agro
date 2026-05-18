@@ -11,6 +11,7 @@ import  {
 import { RecordItem, FarmData } from "@/lib/types";
 import { usePathname, useRouter } from "next/navigation";
 import { Language, TranslationKey, translations } from "@/lib/translations";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 // ─── Context Shape ────────────────────────────────────────────────────────────
 
@@ -57,6 +58,7 @@ const AppContext = createContext<AppContextValue | null>(null);
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
 export function AppProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [income, setIncome] = useState<RecordItem[]>([]);
   const [expense, setExpense] = useState<RecordItem[]>([]);
@@ -214,6 +216,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (res.ok) {
           setIsDbConnected(true);
           setLastSaved(new Date().toLocaleString("bn-BD"));
+          queryClient.invalidateQueries({ queryKey: ["records"] });
         } else {
           setIsDbConnected(false);
         }
@@ -221,8 +224,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setIsDbConnected(false);
       }
     },
-    [income, expense, donation, withdraw, investment]
+    [income, expense, donation, withdraw, investment, queryClient]
   );
+
+  // ── React Query for Records ───────────────────────────────────────────────
+  const { data: recordsData } = useQuery({
+    queryKey: ["records"],
+    queryFn: async () => {
+      const res = await fetch("/api/records");
+      if (!res.ok) throw new Error("Failed to fetch records");
+      return res.json();
+    },
+    enabled: isAuthenticated,
+  });
+
+  useEffect(() => {
+    if (recordsData) {
+      if (recordsData.income) setIncome(recordsData.income);
+      if (recordsData.expense) setExpense(recordsData.expense);
+      if (recordsData.donation) setDonation(recordsData.donation);
+      if (recordsData.withdraw) setWithdraw(recordsData.withdraw);
+      if (recordsData.investment) setInvestment(recordsData.investment);
+      setIsDbConnected(!recordsData.dbOffline);
+      if (!recordsData.dbOffline) setLastSaved(new Date().toLocaleString("bn-BD"));
+    }
+  }, [recordsData]);
 
 
 
@@ -230,22 +256,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const init = async () => {
       setIsLoading(true);
-      try {
-        const dataRes = await fetch("/api/records");
-        if (dataRes.ok) {
-          const d = await dataRes.json();
-          if (d.income) setIncome(d.income);
-          if (d.expense) setExpense(d.expense);
-          if (d.donation) setDonation(d.donation);
-          if (d.withdraw) setWithdraw(d.withdraw);
-          if (d.investment) setInvestment(d.investment);
-          setIsDbConnected(!d.dbOffline);
-          if (!d.dbOffline) setLastSaved(new Date().toLocaleString("bn-BD"));
-        }
-      } catch {
-        setIsDbConnected(false);
-      }
-
       await verifyCredentials(window.location.pathname);
       setIsLoading(false);
     };

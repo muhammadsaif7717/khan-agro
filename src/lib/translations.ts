@@ -50,6 +50,9 @@ export const translations = {
     navWithdraw: "উত্তোলন",
     navInvestment: "বিনিয়োগ",
     navCalculator: "ক্যালকুলেটর",
+    navNotepad: "নোটপ্যাড",
+    navTools: "টুলস",
+    navAgroCount: "এগ্রো কাউন্ট",
 
     // Dashboard Content
     dashboardTitle: "ড্যাশবোর্ড সারসংক্ষেপ",
@@ -129,7 +132,7 @@ export const translations = {
     withdrawConfirm: "উত্তোলন নিশ্চিত করুন",
 
     addInvestment: "বিনিয়োগ যোগ করুন",
-    investmentPlaceholder: "যেমন: নতুন গরু কেনা, খামার সম্প্রসারণ ইত্যাদি...",
+    investmentPlaceholder: "যেমন: মো: সাইফুল ইসলাম, আব্দুল খালেক ইত্যাদি...",
     investmentConfirm: "বিনিয়োগ নিশ্চিত করুন",
 
     // Calculator Specific
@@ -195,6 +198,9 @@ export const translations = {
     navWithdraw: "Withdrawal",
     navInvestment: "Investment",
     navCalculator: "Calculator",
+    navNotepad: "Notepad",
+    navTools: "Tools",
+    navAgroCount: "Agro Count",
 
     // Dashboard Content
     dashboardTitle: "Dashboard Summary",
@@ -274,7 +280,7 @@ export const translations = {
     withdrawConfirm: "Confirm Withdrawal",
 
     addInvestment: "Add Investment",
-    investmentPlaceholder: "e.g., New cow purchase, Farm expansion etc...",
+    investmentPlaceholder: "e.g., Saifur Rahman, Abdul Khaleq...",
     investmentConfirm: "Confirm Investment",
 
     // Calculator Specific

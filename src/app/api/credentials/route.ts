@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import clientPromise, { dbName } from "@/lib/mongodb";
+import clientPromise, { dbName } from "@/lib/db";
 import bcrypt from "bcryptjs";
 
 export async function PUT(request: Request) {

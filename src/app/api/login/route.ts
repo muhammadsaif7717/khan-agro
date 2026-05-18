@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import clientPromise, { dbName } from "@/lib/mongodb";
+import clientPromise, { dbName } from "@/lib/db";
 import bcrypt from "bcryptjs";
 
 export async function POST(request: Request) {

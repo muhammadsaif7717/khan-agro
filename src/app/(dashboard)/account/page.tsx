@@ -10,14 +10,47 @@ import {
   CheckCircle2, 
   ShieldCheck,
   Lock,
-  ArrowLeft
+  ArrowLeft,
+  Database,
+  Download,
+  Upload
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 export default function AccountPage() {
-  const { isDbConnected, changeUsername, changePassword, t } = useApp();
+  const { isDbConnected, changeUsername, changePassword, exportBackup, importBackup, t } = useApp();
+
+  // Import states
+  const [importMsg, setImportMsg] = useState({ text: "", ok: false });
+  const [importLoading, setImportLoading] = useState(false);
+
+  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImportLoading(true);
+    setImportMsg({ text: "", ok: false });
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      const text = evt.target?.result as string;
+      if (!text) {
+        setImportMsg({ text: "❌ ফাইলটি খালি!", ok: false });
+        setImportLoading(false);
+        return;
+      }
+      const res = await importBackup(text);
+      setImportMsg({ text: res.msg, ok: res.ok });
+      setImportLoading(false);
+    };
+    reader.onerror = () => {
+      setImportMsg({ text: "❌ ফাইল পড়তে সমস্যা হয়েছে!", ok: false });
+      setImportLoading(false);
+    };
+    reader.readAsText(file);
+  };
 
   // Username states
   const [newUsername, setNewUsername] = useState("");
@@ -256,6 +289,78 @@ export default function AccountPage() {
             )}
           </form>
         </div>
+      </div>
+
+      {/* Backup & Restore Panel */}
+      <div className="bg-[#0e1626]/60 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 shadow-2xl space-y-6 hover:border-slate-800 transition-all duration-300 mt-6">
+        <div className="flex items-center gap-2 pb-3 border-b border-slate-800/60">
+          <div className="p-2 bg-emerald-500/10 rounded-xl border border-emerald-500/20 text-emerald-400">
+            <Database className="w-5 h-5" />
+          </div>
+          <div className="space-y-0.5">
+            <h3 className="text-md font-extrabold text-slate-100">ডাটা ব্যাকআপ ও পুনরুদ্ধার (Backup & Restore)</h3>
+            <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">ডাটাবেজ সুরক্ষা ও রিস্টোরেশন টুলস</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+          {/* Export section */}
+          <div className="space-y-3 p-5 rounded-2xl bg-[#090d16]/40 border border-slate-800/50">
+            <h4 className="text-sm font-bold text-slate-200 flex items-center gap-1.5 font-extrabold">
+              <Download className="w-4 h-4 text-emerald-400" /> ব্যাকআপ ফাইল ডাউনলোড করুন
+            </h4>
+            <p className="text-xs text-slate-400 leading-relaxed font-medium">
+              আপনার খামারের আয়, ব্যয়, দান, উত্তোলন এবং বিনিয়োগের সমস্ত ডাটা সুরক্ষিত রাখতে একটি `.json` ব্যাকআপ ফাইল ডাউনলোড করে আপনার লোকাল ডিভাইসে সংরক্ষণ করুন।
+            </p>
+            <Button
+              onClick={exportBackup}
+              disabled={!isDbConnected}
+              variant="emerald"
+              className="w-full h-11 text-xs font-bold flex items-center justify-center gap-2 mt-4"
+            >
+              <Download className="w-4 h-4" /> ব্যাকআপ ফাইল ডাউনলোড করুন (JSON)
+            </Button>
+          </div>
+
+          {/* Import section */}
+          <div className="space-y-3 p-5 rounded-2xl bg-[#090d16]/40 border border-slate-800/50">
+            <h4 className="text-sm font-bold text-slate-200 flex items-center gap-1.5 font-extrabold">
+              <Upload className="w-4 h-4 text-emerald-400" /> ব্যাকআপ ফাইল রিস্টোর করুন
+            </h4>
+            <p className="text-xs text-slate-400 leading-relaxed font-medium">
+              আপনার ডিভাইসে সংরক্ষিত পূর্বের `.json` ব্যাকআপ ফাইলটি আপলোড করে আপনার বর্তমান খামারের সম্পূর্ণ ডাটাবেজ পুনরুদ্ধার বা রিস্টোর করতে পারেন।
+            </p>
+            
+            <div className="relative mt-4">
+              <input
+                type="file"
+                accept=".json"
+                onChange={handleImportFile}
+                disabled={!isDbConnected || importLoading}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed z-10"
+              />
+              <Button
+                type="button"
+                disabled={!isDbConnected || importLoading}
+                variant="outline"
+                className="w-full h-11 text-xs font-bold border-slate-800 hover:bg-slate-800/50 text-slate-355 hover:text-white flex items-center justify-center gap-2 rounded-xl transition-all"
+              >
+                <Upload className="w-4 h-4 text-emerald-400" /> {importLoading ? "ফাইল প্রসেস হচ্ছে..." : "ব্যাকআপ ফাইল আপলোড করুন (.json)"}
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {importMsg.text && (
+          <div className={`p-3.5 rounded-xl border text-xs font-bold flex items-center gap-2 animate-fade-in ${
+            importMsg.ok 
+              ? "bg-emerald-950/20 border-emerald-900/50 text-emerald-400" 
+              : "bg-red-950/20 border-red-900/50 text-red-400"
+          }`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${importMsg.ok ? "bg-emerald-400" : "bg-red-450"}`} />
+            {importMsg.text}
+          </div>
+        )}
       </div>
     </div>
   );

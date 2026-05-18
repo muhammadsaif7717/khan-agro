@@ -10,8 +10,12 @@ import {
   Gift, 
   Landmark, 
   Briefcase,
-  Calculator
+  Calculator,
+  StickyNote,
+  Wrench,
+  Layers
 } from "lucide-react";
+import { useState, useEffect } from "react";
 
 export const NAV_ITEMS = [
   { href: "/",          icon: LayoutDashboard, key: "navDashboard" as const },
@@ -20,15 +24,86 @@ export const NAV_ITEMS = [
   { href: "/donation",  icon: Gift,            key: "navDonation" as const },
   { href: "/withdraw",  icon: Landmark,        key: "navWithdraw" as const },
   { href: "/investment",icon: Briefcase,       key: "navInvestment" as const },
-  { href: "/calculator",icon: Calculator,      key: "navCalculator" as const },
 ];
 
 export default function Navbar() {
   const pathname = usePathname();
   const { t } = useApp();
+  const [toolsOpen, setToolsOpen] = useState(false);
+
+  const isToolActive = pathname === "/calculator" || pathname === "/notepad" || pathname === "/agro-count";
+
+  // Close drop-up if user clicks anywhere outside of it
+  useEffect(() => {
+    if (!toolsOpen) return;
+    const handleOutsideClick = () => {
+      setToolsOpen(false);
+    };
+    document.addEventListener("click", handleOutsideClick);
+    return () => {
+      document.removeEventListener("click", handleOutsideClick);
+    };
+  }, [toolsOpen]);
+
+  const handleToolsToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setToolsOpen(!toolsOpen);
+  };
 
   return (
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex flex-col items-center gap-2 max-w-4xl w-[98%] sm:w-fit">
+      
+      {/* Tools Drop-Up Menu */}
+      {toolsOpen && (
+        <div 
+          onClick={(e) => e.stopPropagation()}
+          className="bg-[#0e1626]/95 border border-slate-800/80 backdrop-blur-xl rounded-2xl shadow-2xl p-2 flex flex-col gap-1 absolute bottom-[76px] sm:bottom-[90px] right-2 sm:right-6 min-w-[170px] z-50 animate-fade-in"
+        >
+          {/* Notepad option */}
+          <Link
+            href="/notepad"
+            onClick={() => setToolsOpen(false)}
+            className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
+              pathname === "/notepad"
+                ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                : "text-slate-400 hover:text-slate-200 hover:bg-slate-900/60"
+            }`}
+          >
+            <StickyNote className="w-4 h-4 text-emerald-400" />
+            <span>{t("navNotepad")}</span>
+          </Link>
+
+          {/* Calculator option */}
+          <Link
+            href="/calculator"
+            onClick={() => setToolsOpen(false)}
+            className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
+              pathname === "/calculator"
+                ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                : "text-slate-400 hover:text-slate-200 hover:bg-slate-900/60"
+            }`}
+          >
+            <Calculator className="w-4 h-4 text-emerald-400" />
+            <span>{t("navCalculator")}</span>
+          </Link>
+
+          {/* Agro Count option */}
+          <Link
+            href="/agro-count"
+            onClick={() => setToolsOpen(false)}
+            className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
+              pathname === "/agro-count"
+                ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                : "text-slate-400 hover:text-slate-200 hover:bg-slate-900/60"
+            }`}
+          >
+            <Layers className="w-4 h-4 text-emerald-400" />
+            <span>{t("navAgroCount")}</span>
+          </Link>
+        </div>
+      )}
+
+      {/* Main Bottom Bar */}
       <nav className="h-[68px] sm:h-[80px] bg-[#0e1626]/90 border border-slate-800/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-2xl flex items-stretch select-none px-2 sm:px-6 gap-0.5 sm:gap-3 w-full">
         {NAV_ITEMS.map((item) => {
           const isActive = pathname === item.href;
@@ -47,6 +122,22 @@ export default function Navbar() {
             </Link>
           );
         })}
+
+        {/* Tools Popover Button */}
+        <button
+          onClick={handleToolsToggle}
+          className={`flex-1 sm:flex-initial sm:px-5 flex flex-col items-center justify-center gap-1 sm:gap-2 transition-all hover:scale-105 active:scale-95 relative rounded-xl ${
+            isToolActive || toolsOpen
+              ? "text-emerald-400 font-bold"
+              : "text-slate-400 hover:text-slate-200"
+          }`}
+        >
+          <Wrench className={`w-[18px] h-[18px] sm:w-[22px] sm:h-[22px] transition-all duration-300 ${isToolActive || toolsOpen ? "text-emerald-400 scale-105" : "text-slate-400"}`} />
+          <span className="text-[7.5px] sm:text-[11.5px] tracking-tight sm:tracking-normal font-semibold sm:font-bold whitespace-nowrap">{t("navTools")}</span>
+          {isToolActive && (
+            <span className="absolute bottom-1 sm:bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#10b981]" />
+          )}
+        </button>
       </nav>
     </div>
   );

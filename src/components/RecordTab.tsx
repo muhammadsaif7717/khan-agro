@@ -46,7 +46,7 @@ function filterRecords(list: RecordItem[], query: string) {
 export default function RecordTab({
   type, titleKey, placeholderKey, accentClass, borderHoverClass, buttonLabelKey,
 }: RecordTabProps) {
-  const { isDbConnected, addItem, deleteItem, income, expense, donation, withdraw, investment, t } = useApp();
+  const { isDbConnected, addItem, deleteItem, income, expense, donation, withdraw, investment, t, language } = useApp();
 
   const Icon = ICON_MAP[type];
   
@@ -60,6 +60,13 @@ export default function RecordTab({
 
   const filtered = filterRecords(list, query);
   const total = list.reduce((s, i) => s + i.amount, 0);
+  const filteredTotal = filtered.reduce((s, { item }) => s + item.amount, 0);
+
+  const percent = total > 0 ? (filteredTotal / total) * 100 : 0;
+  const formattedPercent = percent.toFixed(2);
+  const localizedPercent = language === "bn"
+    ? formattedPercent.replace(/\d/g, (d) => "০১২৩৪৫৬৭৮৯"[Number(d)]) + "%"
+    : formattedPercent + "%";
 
   const handleAdd = async () => {
     if (!form.text.trim() || !form.amount) {
@@ -98,7 +105,9 @@ export default function RecordTab({
           <CardContent className="space-y-4">
             <div className="space-y-1.5">
               <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">
-                {t("descLabel")}
+                {type === "investment"
+                  ? (language === "bn" ? "ব্যক্তির নাম" : "Investor's Name")
+                  : t("descLabel")}
               </label>
               <Input
                 type="text"
@@ -166,6 +175,37 @@ export default function RecordTab({
               <Search className="w-4 h-4" />
             </span>
           </div>
+
+          {query.trim() !== "" && (
+            <div className="flex flex-col gap-2.5 px-4 py-3.5 bg-[#0e1626]/80 border border-slate-800 rounded-xl animate-fade-in shadow-sm">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-300">
+                <span className="flex items-center gap-2">
+                  <span className={`w-2 h-2 rounded-full ${accentClass.replace("text-", "bg-")} shadow-[0_0_8px_currentColor] animate-pulse`} />
+                  <span>
+                    {language === "bn"
+                      ? `${filtered.length} টি রেকর্ড পাওয়া গেছে`
+                      : `${filtered.length} records found`}
+                  </span>
+                </span>
+                <span className={`${accentClass} font-black text-sm`}>
+                  {language === "bn" ? "মোট: " : "Total: "} {t("takaSymbol")} {filteredTotal.toLocaleString()}
+                </span>
+              </div>
+              
+              {type === "investment" && total > 0 && (
+                <div className="text-[11px] text-slate-400 border-t border-slate-800/60 pt-2 flex items-center justify-between font-bold">
+                  <span>
+                    {language === "bn" ? "বিনিয়োগকারী হিসাব বিশ্লেষণ" : "Investor Share Analysis"}
+                  </span>
+                  <span className="text-purple-400 font-extrabold">
+                    {language === "bn" 
+                      ? `এটি মোট বিনিয়োগের ${localizedPercent}` 
+                      : `This is ${localizedPercent} of total investments`}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {filtered.map(({ item, origIdx }) => (

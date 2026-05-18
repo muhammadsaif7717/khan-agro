@@ -1,10 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { useApp } from "@/context/AppContext";
 import { 
   BarChart3, 
-  LineChart, 
   ClipboardList, 
   PieChart, 
   Scale, 
@@ -17,14 +15,6 @@ import {
   Briefcase
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-
-interface TooltipState {
-  month: string;
-  type: "income" | "expense";
-  value: number;
-  x: number;
-  y: number;
-}
 
 const BADGE_MAP = {
   navIncome: {
@@ -60,7 +50,7 @@ export default function DashboardContent() {
     isDbConnected, lastSaved, t,
   } = useApp();
 
-  const [activeTooltip, setActiveTooltip] = useState<TooltipState | null>(null);
+
 
   // ── Totals ──────────────────────────────────────────────────────────────────
   const totalIncome     = income.reduce((s, i) => s + i.amount, 0);
@@ -93,33 +83,7 @@ export default function DashboardContent() {
     .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, 8);
 
-  // ── Chart Data (last 6 months) ────────────────────────────────────────────────
-  const getChartData = () => {
-    const monthsData: Record<string, { income: number; expense: number }> = {};
-    const parseMonth = (d: string) => (d ? d.substring(0, 7) : "");
 
-    income.forEach(item => {
-      const m = parseMonth(item.date); if (!m) return;
-      if (!monthsData[m]) monthsData[m] = { income: 0, expense: 0 };
-      monthsData[m].income += item.amount;
-    });
-    expense.forEach(item => {
-      const m = parseMonth(item.date); if (!m) return;
-      if (!monthsData[m]) monthsData[m] = { income: 0, expense: 0 };
-      monthsData[m].expense += item.amount;
-    });
-
-    return Object.keys(monthsData)
-      .sort()
-      .slice(-6)
-      .map(m => {
-        const [year, month] = m.split("-");
-        return { month: `${month}/${year.slice(2)}`, rawMonth: m, ...monthsData[m] };
-      });
-  };
-
-  const chartData = getChartData();
-  const maxVal = Math.max(...chartData.flatMap(d => [d.income, d.expense]), 1000);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -146,96 +110,10 @@ export default function DashboardContent() {
         ))}
       </div>
 
-      {/* ── Chart + Recent ────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-
-        {/* Monthly Chart */}
-        {chartData.length > 0 && (
-          <Card className="lg:col-span-8">
-            <CardHeader className="pb-3 flex flex-row items-center justify-between border-0">
-              <div>
-                <CardTitle className="text-sm font-bold flex items-center gap-1.5 text-slate-200">
-                  <LineChart className="w-4 h-4 text-slate-400" /> {t("monthlyChartTitle")}
-                </CardTitle>
-                <CardDescription>{t("monthlyChartDesc")}</CardDescription>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="relative w-full h-[230px]">
-                <svg className="w-full h-full" viewBox="0 0 360 200" preserveAspectRatio="none">
-                  {/* Grid lines */}
-                  {[20, 65, 110, 155].map(y => (
-                    <line key={y} x1="40" y1={y} x2="340" y2={y} stroke="#1e293b" strokeWidth="1" strokeDasharray={y === 155 ? undefined : "3"} />
-                  ))}
-                  {/* Y axis labels */}
-                  <text x="32" y="24" fill="#64748b" fontSize="8" textAnchor="end">{t("takaSymbol")}{maxVal.toLocaleString()}</text>
-                  <text x="32" y="69" fill="#64748b" fontSize="8" textAnchor="end">{t("takaSymbol")}{(maxVal * 0.7).toLocaleString()}</text>
-                  <text x="32" y="114" fill="#64748b" fontSize="8" textAnchor="end">{t("takaSymbol")}{(maxVal * 0.3).toLocaleString()}</text>
-                  <text x="32" y="159" fill="#64748b" fontSize="8" textAnchor="end">{t("takaSymbol")}0</text>
-
-                  <defs>
-                    <linearGradient id="incGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#10b981" />
-                      <stop offset="100%" stopColor="#047857" />
-                    </linearGradient>
-                    <linearGradient id="expGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#f87171" />
-                      <stop offset="100%" stopColor="#b91c1c" />
-                    </linearGradient>
-                  </defs>
-
-                  {chartData.map((data, idx) => {
-                    const x = 50 + idx * 48;
-                    const bw = 14;
-                    const ih = (data.income / maxVal) * 135;
-                    const eh = (data.expense / maxVal) * 135;
-                    return (
-                      <g key={data.month}>
-                        <rect x={x} y={155 - ih} width={bw} height={ih} fill="url(#incGrad)" rx="3"
-                          className="cursor-pointer hover:opacity-80 transition-opacity"
-                          onMouseEnter={() => setActiveTooltip({ month: data.month, type: "income", value: data.income, x: x + 7, y: 155 - ih })}
-                          onMouseLeave={() => setActiveTooltip(null)}
-                        />
-                        <rect x={x + 16} y={155 - eh} width={bw} height={eh} fill="url(#expGrad)" rx="3"
-                          className="cursor-pointer hover:opacity-80 transition-opacity"
-                          onMouseEnter={() => setActiveTooltip({ month: data.month, type: "expense", value: data.expense, x: x + 23, y: 155 - eh })}
-                          onMouseLeave={() => setActiveTooltip(null)}
-                        />
-                        <text x={x + 15} y="174" fill="#64748b" fontSize="8" textAnchor="middle">{data.month}</text>
-                      </g>
-                    );
-                  })}
-                </svg>
-
-                {activeTooltip && (
-                  <div
-                    className="absolute z-10 bg-[#0e1626] border border-slate-700/80 px-3 py-1.5 rounded-lg shadow-xl text-center text-xs space-y-0.5 -translate-x-1/2 -translate-y-full pointer-events-none"
-                    style={{ left: `${(activeTooltip.x / 360) * 100}%`, top: `${(activeTooltip.y / 200) * 100 - 4}%` }}
-                  >
-                    <p className="text-slate-400 font-bold text-[9px]">{activeTooltip.month}</p>
-                    <p className={`font-black ${activeTooltip.type === "income" ? "text-emerald-400" : "text-red-400"}`}>
-                      {activeTooltip.type === "income" ? t("navIncome") : t("navExpense")}: {t("takaSymbol")}{activeTooltip.value.toLocaleString()}
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex justify-center gap-6 text-[10px] font-bold pt-1">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded bg-emerald-600 block" />
-                  <span className="text-slate-300 uppercase tracking-wider">{t("totalIncome")}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded bg-red-500 block" />
-                  <span className="text-slate-300 uppercase tracking-wider">{t("totalExpense")}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
+      {/* ── Recent Transactions ────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 gap-6">
         {/* Recent Transactions */}
-        <Card className={`${chartData.length > 0 ? "lg:col-span-4" : "lg:col-span-12"} flex flex-col`}>
+        <Card className="flex flex-col">
           <CardHeader className="pb-3 border-0">
             <CardTitle className="text-sm font-bold flex items-center gap-1.5 text-slate-200">
               <ClipboardList className="w-4 h-4 text-slate-400" /> {t("recentTransactions")}

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Exo_2 } from "next/font/google";
 import "./globals.css";
 import { AppProvider } from "@/context/AppContext";
+import QueryProvider from "@/providers/query-provider";
 
 const exo2 = Exo_2({
   subsets: ["latin"],
@@ -39,9 +40,11 @@ export default function RootLayout({
   return (
     <html lang="bn" className={`${exo2.variable} font-sans h-full antialiased`}>
       <body className="min-h-full flex flex-col bg-[#070b13] text-white">
-        <AppProvider>
-          {children}
-        </AppProvider>
+        <QueryProvider>
+          <AppProvider>
+            {children}
+          </AppProvider>
+        </QueryProvider>
       </body>
     </html>
   );
