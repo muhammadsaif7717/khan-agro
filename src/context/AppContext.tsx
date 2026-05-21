@@ -51,6 +51,7 @@ interface AppContextValue {
   deleteItem: (type: Exclude<keyof FarmData, "savedTotals">, index: number) => Promise<void>;
   saveAndResetCategory: (type: Exclude<keyof FarmData, "savedTotals">, note?: string) => Promise<void>;
   deleteSavedTotal: (type: Exclude<keyof FarmData, "savedTotals">, index: number) => Promise<void>;
+  setReturnedCashOffset: (amount: number) => Promise<void>;
   // Settings & Backup
   changeUsername: (newUser: string, pass: string) => Promise<{ ok: boolean; msg: string }>;
   changePassword: (oldPass: string, newPass: string, confirmNewPass: string) => Promise<{ ok: boolean; msg: string }>;
@@ -370,6 +371,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [income, expense, donation, withdraw, investment, reinvestment, returnedCash, saveAllData]
   );
 
+  const setReturnedCashOffset = useCallback(async (amount: number) => {
+    const newSaved = { ...savedTotals };
+    const currentList = newSaved["returnedCashOffset"] || [];
+    newSaved["returnedCashOffset"] = [...currentList, { amount, note: "Reset", date: new Date().toISOString().split("T")[0] }];
+    setSavedTotals(newSaved);
+    await saveAllData(income, expense, donation, withdraw, investment, reinvestment, returnedCash, newSaved);
+  }, [income, expense, donation, withdraw, investment, reinvestment, returnedCash, savedTotals, saveAllData]);
+
   const saveAndResetCategory = useCallback(
     async (type: Exclude<keyof FarmData, "savedTotals">, note?: string) => {
       const listMap: Record<Exclude<keyof FarmData, "savedTotals">, RecordItem[]> = {
@@ -517,7 +526,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         language, setLanguage, t,
         income, expense, donation, withdraw, investment, reinvestment, returnedCash, savedTotals,
         isDbConnected, isLoading, lastSaved,
-        addItem, deleteItem, saveAndResetCategory, deleteSavedTotal,
+        addItem, deleteItem, saveAndResetCategory, deleteSavedTotal, setReturnedCashOffset,
         changeUsername, changePassword, exportBackup, importBackup
       }}
     >

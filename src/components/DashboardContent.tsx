@@ -60,14 +60,13 @@ const BADGE_MAP = {
 export default function DashboardContent() {
   const {
     income, expense, donation, withdraw, investment, reinvestment, returnedCash, savedTotals,
-    isDbConnected, lastSaved, t, language, addItem
+    isDbConnected, lastSaved, t, language, addItem, setReturnedCashOffset
   } = useApp();
 
   const handleResetReturnedCash = async (amount: number) => {
     if (amount <= 0) return;
     if (!confirm(language === "bn" ? "আপনি কি নিশ্চিতভাবে রিটার্ন ক্যাশ 0 করতে চান?" : "Are you sure you want to reset Returned Cash to 0?")) return;
-    const today = new Date().toISOString().split("T")[0];
-    await addItem("returnedCash", language === "bn" ? "রিসেট" : "Reset", amount, today);
+    await setReturnedCashOffset(amount);
   };
 
   // Helper to calculate grand total (current active + saved history total)
@@ -85,11 +84,13 @@ export default function DashboardContent() {
   const totalWithdraw       = getGrandTotalForType("withdraw", withdraw);
   const totalInvestment     = getGrandTotalForType("investment", investment);
   const totalReinvestment   = getGrandTotalForType("reinvestment", reinvestment);
-  const totalReturnedCash   = getGrandTotalForType("returnedCash", returnedCash);
+
+  const resetOffsetList = savedTotals["returnedCashOffset"] || [];
+  const totalResetOffset = resetOffsetList.reduce((s, i) => s + i.amount, 0);
 
   const profit = totalIncome - totalExpense; // total profit = total income - total expense
   const recentProfit = profit - (totalDonation + totalWithdraw); // recent profit = total profit - (donation + withdrawal)
-  const returnedCashVal = (totalIncome - profit) - totalReturnedCash; // returned cash offset
+  const returnedCashVal = (totalIncome - profit) - totalResetOffset; // returned cash = (total income - total profit) - offset
   const calcCashBalanceVal = totalReinvestment - totalExpense; // cash balance = reinvestment - total expence
 
   // ── Summary Cards ────────────────────────────────────────────────────────────
@@ -138,10 +139,10 @@ export default function DashboardContent() {
               <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-tight">
                 {t(card.labelKey)}
               </span>
-              {card.labelKey === "calcReturnCash" && card.value > 0 && (
+              {card.labelKey === "calcReturnCash" && (
                 <button
                   onClick={() => handleResetReturnedCash(card.value)}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity bg-rose-500/20 hover:bg-rose-500 hover:text-white text-rose-400 text-[8px] px-2 py-0.5 rounded cursor-pointer"
+                  className="bg-rose-500/20 hover:bg-rose-500 hover:text-white text-rose-400 text-[8px] px-2 py-0.5 rounded cursor-pointer transition-colors"
                   title="Reset to 0"
                 >
                   Reset
