@@ -8,7 +8,7 @@ import  {
   useCallback,
   ReactNode,
 } from "react";
-import { RecordItem, FarmData } from "@/lib/types";
+import { RecordItem, FarmData, SavedTotalItem } from "@/lib/types";
 import { usePathname, useRouter } from "next/navigation";
 import { Language, TranslationKey, translations } from "@/lib/translations";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -37,6 +37,9 @@ interface AppContextValue {
   donation: RecordItem[];
   withdraw: RecordItem[];
   investment: RecordItem[];
+  reinvestment: RecordItem[];
+  returnedCash: RecordItem[];
+  savedTotals: Record<string, SavedTotalItem[]>;
 
   // DB status
   isDbConnected: boolean | null;
@@ -44,8 +47,10 @@ interface AppContextValue {
   lastSaved: string;
 
   // CRUD helpers
-  addItem: (type: keyof FarmData, text: string, amount: number, date: string) => Promise<void>;
-  deleteItem: (type: keyof FarmData, index: number) => Promise<void>;
+  addItem: (type: Exclude<keyof FarmData, "savedTotals">, text: string, amount: number, date: string, category?: string) => Promise<void>;
+  deleteItem: (type: Exclude<keyof FarmData, "savedTotals">, index: number) => Promise<void>;
+  saveAndResetCategory: (type: Exclude<keyof FarmData, "savedTotals">, note?: string) => Promise<void>;
+  deleteSavedTotal: (type: Exclude<keyof FarmData, "savedTotals">, index: number) => Promise<void>;
   // Settings & Backup
   changeUsername: (newUser: string, pass: string) => Promise<{ ok: boolean; msg: string }>;
   changePassword: (oldPass: string, newPass: string, confirmNewPass: string) => Promise<{ ok: boolean; msg: string }>;
@@ -65,6 +70,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [donation, setDonation] = useState<RecordItem[]>([]);
   const [withdraw, setWithdraw] = useState<RecordItem[]>([]);
   const [investment, setInvestment] = useState<RecordItem[]>([]);
+  const [reinvestment, setReinvestment] = useState<RecordItem[]>([]);
+  const [returnedCash, setReturnedCash] = useState<RecordItem[]>([]);
+  const [savedTotals, setSavedTotals] = useState<Record<string, SavedTotalItem[]>>({});
   const [isDbConnected, setIsDbConnected] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [lastSaved, setLastSaved] = useState("");
@@ -205,13 +213,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
       exp: RecordItem[] = expense,
       don: RecordItem[] = donation,
       wth: RecordItem[] = withdraw,
-      inv: RecordItem[] = investment
+      inv: RecordItem[] = investment,
+      reinv: RecordItem[] = reinvestment,
+      retCash: RecordItem[] = returnedCash,
+      saved: Record<string, SavedTotalItem[]> = savedTotals
     ) => {
       try {
         const res = await fetch("/api/records", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ income: inc, expense: exp, donation: don, withdraw: wth, investment: inv }),
+          body: JSON.stringify({
+            income: inc,
+            expense: exp,
+            donation: don,
+            withdraw: wth,
+            investment: inv,
+            reinvestment: reinv,
+            returnedCash: retCash,
+            savedTotals: saved
+          }),
         });
         if (res.ok) {
           setIsDbConnected(true);
@@ -224,7 +244,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setIsDbConnected(false);
       }
     },
-    [income, expense, donation, withdraw, investment, queryClient]
+    [income, expense, donation, withdraw, investment, reinvestment, returnedCash, savedTotals, queryClient]
   );
 
   // ── React Query for Records ───────────────────────────────────────────────
@@ -245,6 +265,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (recordsData.donation) setDonation(recordsData.donation);
       if (recordsData.withdraw) setWithdraw(recordsData.withdraw);
       if (recordsData.investment) setInvestment(recordsData.investment);
+      if (recordsData.reinvestment) setReinvestment(recordsData.reinvestment);
+      if (recordsData.returnedCash) setReturnedCash(recordsData.returnedCash);
+      if (recordsData.savedTotals) setSavedTotals(recordsData.savedTotals);
       setIsDbConnected(!recordsData.dbOffline);
       if (!recordsData.dbOffline) setLastSaved(new Date().toLocaleString("bn-BD"));
     }
@@ -313,36 +336,89 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // ── CRUD ───────────────────────────────────────────────────────────────────
   const addItem = useCallback(
-    async (type: keyof FarmData, text: string, amount: number, date: string) => {
+    async (type: Exclude<keyof FarmData, "savedTotals">, text: string, amount: number, date: string) => {
       const item: RecordItem = { text: text.trim(), amount, date };
-      let inc = income, exp = expense, don = donation, wth = withdraw, inv = investment;
+      let inc = income, exp = expense, don = donation, wth = withdraw, inv = investment, reinv = reinvestment, retCash = returnedCash;
 
       if (type === "income") { inc = [...income, item]; setIncome(inc); }
       else if (type === "expense") { exp = [...expense, item]; setExpense(exp); }
       else if (type === "donation") { don = [...donation, item]; setDonation(don); }
       else if (type === "withdraw") { wth = [...withdraw, item]; setWithdraw(wth); }
       else if (type === "investment") { inv = [...investment, item]; setInvestment(inv); }
+      else if (type === "reinvestment") { reinv = [...reinvestment, item]; setReinvestment(reinv); }
+      else if (type === "returnedCash") { retCash = [...returnedCash, item]; setReturnedCash(retCash); }
 
-      await saveAllData(inc, exp, don, wth, inv);
-
+      await saveAllData(inc, exp, don, wth, inv, reinv, retCash);
     },
-    [income, expense, donation, withdraw, investment, saveAllData]
+    [income, expense, donation, withdraw, investment, reinvestment, returnedCash, saveAllData]
   );
 
   const deleteItem = useCallback(
-    async (type: keyof FarmData, index: number) => {
-      let inc = income, exp = expense, don = donation, wth = withdraw, inv = investment;
+    async (type: Exclude<keyof FarmData, "savedTotals">, index: number) => {
+      let inc = income, exp = expense, don = donation, wth = withdraw, inv = investment, reinv = reinvestment, retCash = returnedCash;
 
       if (type === "income") { inc = income.filter((_, i) => i !== index); setIncome(inc); }
       else if (type === "expense") { exp = expense.filter((_, i) => i !== index); setExpense(exp); }
       else if (type === "donation") { don = donation.filter((_, i) => i !== index); setDonation(don); }
       else if (type === "withdraw") { wth = withdraw.filter((_, i) => i !== index); setWithdraw(wth); }
       else if (type === "investment") { inv = investment.filter((_, i) => i !== index); setInvestment(inv); }
+      else if (type === "reinvestment") { reinv = reinvestment.filter((_, i) => i !== index); setReinvestment(reinv); }
+      else if (type === "returnedCash") { retCash = returnedCash.filter((_, i) => i !== index); setReturnedCash(retCash); }
 
-      await saveAllData(inc, exp, don, wth, inv);
-     
+      await saveAllData(inc, exp, don, wth, inv, reinv, retCash);
     },
-    [income, expense, donation, withdraw, investment, saveAllData]
+    [income, expense, donation, withdraw, investment, reinvestment, returnedCash, saveAllData]
+  );
+
+  const saveAndResetCategory = useCallback(
+    async (type: Exclude<keyof FarmData, "savedTotals">, note?: string) => {
+      const listMap: Record<Exclude<keyof FarmData, "savedTotals">, RecordItem[]> = {
+        income, expense, donation, withdraw, investment, reinvestment, returnedCash
+      };
+      const list = listMap[type] || [];
+      const totalAmount = list.reduce((sum, item) => sum + item.amount, 0);
+      if (totalAmount === 0) return;
+
+      const formattedDate = new Date().toISOString().split("T")[0];
+      const newSavedItem: SavedTotalItem = {
+        amount: totalAmount,
+        date: formattedDate,
+        note: note?.trim() || `Reset on ${formattedDate}`
+      };
+
+      const updatedSavedTotals = {
+        ...savedTotals,
+        [type]: [...(savedTotals[type] || []), newSavedItem]
+      };
+      setSavedTotals(updatedSavedTotals);
+
+      let inc = income, exp = expense, don = donation, wth = withdraw, inv = investment, reinv = reinvestment, retCash = returnedCash;
+      if (type === "income") { inc = []; setIncome([]); }
+      else if (type === "expense") { exp = []; setExpense([]); }
+      else if (type === "donation") { don = []; setDonation([]); }
+      else if (type === "withdraw") { wth = []; setWithdraw([]); }
+      else if (type === "investment") { inv = []; setInvestment([]); }
+      else if (type === "reinvestment") { reinv = []; setReinvestment([]); }
+      else if (type === "returnedCash") { retCash = []; setReturnedCash([]); }
+
+      await saveAllData(inc, exp, don, wth, inv, reinv, retCash, updatedSavedTotals);
+    },
+    [income, expense, donation, withdraw, investment, reinvestment, returnedCash, savedTotals, saveAllData]
+  );
+
+  const deleteSavedTotal = useCallback(
+    async (type: Exclude<keyof FarmData, "savedTotals">, index: number) => {
+      const typeSavedList = savedTotals[type] || [];
+      const updatedList = typeSavedList.filter((_, i) => i !== index);
+      const updatedSavedTotals = {
+        ...savedTotals,
+        [type]: updatedList
+      };
+      setSavedTotals(updatedSavedTotals);
+
+      await saveAllData(income, expense, donation, withdraw, investment, reinvestment, returnedCash, updatedSavedTotals);
+    },
+    [income, expense, donation, withdraw, investment, reinvestment, returnedCash, savedTotals, saveAllData]
   );
 
   // ── Settings & Credentials ──────────────────────────────────────────────────
@@ -393,7 +469,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // ── Backup ─────────────────────────────────────────────────────────────────
   const exportBackup = useCallback(() => {
-    const data = { income, expense, donation, withdraw, investment };
+    const data = { income, expense, donation, withdraw, investment, reinvestment, returnedCash, savedTotals };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -402,7 +478,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  }, [income, expense, donation, withdraw, investment]);
+  }, [income, expense, donation, withdraw, investment, reinvestment, returnedCash, savedTotals]);
 
   const importBackup = async (jsonText: string) => {
     try {
@@ -412,13 +488,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (Array.isArray(d.donation)) setDonation(d.donation);
       if (Array.isArray(d.withdraw)) setWithdraw(d.withdraw);
       if (Array.isArray(d.investment)) setInvestment(d.investment);
+      if (Array.isArray(d.reinvestment)) setReinvestment(d.reinvestment);
+      if (Array.isArray(d.returnedCash)) setReturnedCash(d.returnedCash);
+      if (d.savedTotals && typeof d.savedTotals === "object") setSavedTotals(d.savedTotals);
       
       await saveAllData(
         Array.isArray(d.income) ? d.income : income,
         Array.isArray(d.expense) ? d.expense : expense,
         Array.isArray(d.donation) ? d.donation : donation,
         Array.isArray(d.withdraw) ? d.withdraw : withdraw,
-        Array.isArray(d.investment) ? d.investment : investment
+        Array.isArray(d.investment) ? d.investment : investment,
+        Array.isArray(d.reinvestment) ? d.reinvestment : reinvestment,
+        Array.isArray(d.returnedCash) ? d.returnedCash : returnedCash,
+        d.savedTotals && typeof d.savedTotals === "object" ? d.savedTotals : savedTotals
       );
       
       return { ok: true, msg: "✅ ব্যাকআপ রিস্টোর সফল হয়েছে!" };
@@ -433,9 +515,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         isAuthenticated, setIsAuthenticated, login, logout,
         theme, toggleTheme,
         language, setLanguage, t,
-        income, expense, donation, withdraw, investment,
+        income, expense, donation, withdraw, investment, reinvestment, returnedCash, savedTotals,
         isDbConnected, isLoading, lastSaved,
-        addItem, deleteItem,
+        addItem, deleteItem, saveAndResetCategory, deleteSavedTotal,
         changeUsername, changePassword, exportBackup, importBackup
       }}
     >

@@ -12,9 +12,12 @@ import {
   TrendingDown,
   Gift,
   Landmark,
-  Briefcase
+  Briefcase,
+  Coins,
+  Undo2
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { RecordItem, FarmData } from "@/lib/types";
 
 const BADGE_MAP = {
   navIncome: {
@@ -42,48 +45,79 @@ const BADGE_MAP = {
     badgeClass: "text-purple-400 bg-purple-500/10 border-purple-500/20",
     textClass: "text-purple-400",
   },
+  navReinvestment: {
+    icon: Coins,
+    badgeClass: "text-amber-400 bg-amber-500/10 border-amber-500/20",
+    textClass: "text-amber-400",
+  },
+  navReturnedCash: {
+    icon: Undo2,
+    badgeClass: "text-rose-400 bg-rose-500/10 border-rose-500/20",
+    textClass: "text-rose-400",
+  },
 };
 
 export default function DashboardContent() {
   const {
-    income, expense, donation, withdraw, investment,
-    isDbConnected, lastSaved, t,
+    income, expense, donation, withdraw, investment, reinvestment, returnedCash, savedTotals,
+    isDbConnected, lastSaved, t, language, addItem
   } = useApp();
 
+  const handleResetReturnedCash = async (amount: number) => {
+    if (amount <= 0) return;
+    if (!confirm(language === "bn" ? "আপনি কি নিশ্চিতভাবে রিটার্ন ক্যাশ 0 করতে চান?" : "Are you sure you want to reset Returned Cash to 0?")) return;
+    const today = new Date().toISOString().split("T")[0];
+    await addItem("returnedCash", language === "bn" ? "রিসেট" : "Reset", amount, today);
+  };
 
+  // Helper to calculate grand total (current active + saved history total)
+  const getGrandTotalForType = (type: keyof FarmData, list: RecordItem[]) => {
+    const activeTotal = list.reduce((s, i) => s + i.amount, 0);
+    const savedList = savedTotals[type] || [];
+    const savedTotal = savedList.reduce((s, i) => s + i.amount, 0);
+    return activeTotal + savedTotal;
+  };
 
   // ── Totals ──────────────────────────────────────────────────────────────────
-  const totalIncome     = income.reduce((s, i) => s + i.amount, 0);
-  const totalExpense    = expense.reduce((s, i) => s + i.amount, 0);
-  const totalDonation   = donation.reduce((s, i) => s + i.amount, 0);
-  const totalWithdraw   = withdraw.reduce((s, i) => s + i.amount, 0);
-  const totalInvestment = investment.reduce((s, i) => s + i.amount, 0);
-  const profit      = totalIncome - totalExpense;
-  const cashBalance = profit - totalDonation - totalWithdraw;
+  const totalIncome         = getGrandTotalForType("income", income);
+  const totalExpense        = getGrandTotalForType("expense", expense);
+  const totalDonation       = getGrandTotalForType("donation", donation);
+  const totalWithdraw       = getGrandTotalForType("withdraw", withdraw);
+  const totalInvestment     = getGrandTotalForType("investment", investment);
+  const totalReinvestment   = getGrandTotalForType("reinvestment", reinvestment);
+  const totalReturnedCash   = getGrandTotalForType("returnedCash", returnedCash);
+
+  const profit = totalIncome - totalExpense; // total profit = total income - total expense
+  const recentProfit = profit - (totalDonation + totalWithdraw); // recent profit = total profit - (donation + withdrawal)
+  const returnedCashVal = (totalIncome - profit) - totalReturnedCash; // returned cash offset
+  const calcCashBalanceVal = totalReinvestment - totalExpense; // cash balance = reinvestment - total expence
 
   // ── Summary Cards ────────────────────────────────────────────────────────────
   const summaryCards = [
-    { labelKey: "totalIncome" as const,         value: totalIncome,     color: "border-l-emerald-500", textColor: "text-emerald-400", glowClass: "glow-income" },
-    { labelKey: "totalExpense" as const,        value: totalExpense,    color: "border-l-red-500",     textColor: "text-red-400",     glowClass: "glow-expense" },
-    { labelKey: "totalDonation" as const,       value: totalDonation,   color: "border-l-orange-500",  textColor: "text-orange-400",  glowClass: "glow-donation" },
-    { labelKey: "totalWithdraw" as const,       value: totalWithdraw,   color: "border-l-cyan-500",    textColor: "text-cyan-400",    glowClass: "glow-withdraw" },
-    { labelKey: "totalProfit" as const,         value: profit,          color: "border-l-yellow-500",  textColor: profit >= 0 ? "text-yellow-400" : "text-red-400", glowClass: "glow-profit" },
-    { labelKey: "cashBalance" as const,         value: cashBalance,     color: "border-l-teal-500",    textColor: cashBalance >= 0 ? "text-teal-400" : "text-red-400", glowClass: "glow-cash" },
-    { labelKey: "totalInvestment" as const,    value: totalInvestment, color: "border-l-purple-500",  textColor: "text-purple-400",  glowClass: "glow-investment" },
+    { labelKey: "totalIncome" as const,         value: totalIncome,         color: "border-l-emerald-500", textColor: "text-emerald-400", glowClass: "glow-income" },
+    { labelKey: "totalExpense" as const,        value: totalExpense,        color: "border-l-red-500",     textColor: "text-red-400",     glowClass: "glow-expense" },
+    { labelKey: "totalProfit" as const,         value: profit,              color: "border-l-yellow-500",  textColor: profit >= 0 ? "text-yellow-400" : "text-red-400", glowClass: "glow-profit" },
+    { labelKey: "recentProfit" as const,        value: recentProfit,        color: "border-l-teal-500",    textColor: recentProfit >= 0 ? "text-teal-400" : "text-red-400", glowClass: "glow-recent-profit" },
+    { labelKey: "totalDonation" as const,       value: totalDonation,       color: "border-l-orange-500",  textColor: "text-orange-400",  glowClass: "glow-donation" },
+    { labelKey: "totalWithdraw" as const,       value: totalWithdraw,       color: "border-l-cyan-500",    textColor: "text-cyan-400",    glowClass: "glow-withdraw" },
+    { labelKey: "calcReturnCash" as const,      value: returnedCashVal,     color: "border-l-rose-500",    textColor: returnedCashVal >= 0 ? "text-rose-400" : "text-red-400", glowClass: "glow-return-cash" },
+    { labelKey: "totalInvestment" as const,     value: totalInvestment,     color: "border-l-purple-500",  textColor: "text-purple-400",  glowClass: "glow-investment" },
+    { labelKey: "totalReinvestment" as const,   value: totalReinvestment,   color: "border-l-amber-500",   textColor: "text-amber-400",   glowClass: "glow-reinvestment" },
+    { labelKey: "calcCashBalance" as const,     value: calcCashBalanceVal,  color: "border-l-indigo-500",  textColor: calcCashBalanceVal >= 0 ? "text-indigo-400" : "text-red-400", glowClass: "glow-cash-balance" },
   ];
 
   // ── Recent Transactions ──────────────────────────────────────────────────────
   const recentTransactions = [
     ...income.map(i => ({ typeKey: "navIncome" as const,       text: i.text, amount: i.amount, date: i.date, colorClass: "text-emerald-400 bg-emerald-950/40 border border-emerald-900/30" })),
-    ...expense.map(i => ({ typeKey: "navExpense" as const,    text: i.text, amount: i.amount, date: i.date, colorClass: "text-red-400 bg-red-950/40 border border-red-900/30" })),
-    ...donation.map(i => ({ typeKey: "navDonation" as const,     text: i.text, amount: i.amount, date: i.date, colorClass: "text-orange-400 bg-orange-950/40 border border-orange-900/30" })),
-    ...withdraw.map(i => ({ typeKey: "navWithdraw" as const,text: i.text, amount: i.amount, date: i.date, colorClass: "text-cyan-400 bg-cyan-950/40 border border-cyan-900/30" })),
-    ...investment.map(i => ({ typeKey: "navInvestment" as const,text: i.text, amount: i.amount, date: i.date, colorClass: "text-purple-400 bg-purple-950/40 border border-purple-900/30" })),
+    ...expense.map(i => ({ typeKey: "navExpense" as const,     text: i.text, amount: i.amount, date: i.date, colorClass: "text-red-400 bg-red-950/40 border border-red-900/30" })),
+    ...donation.map(i => ({ typeKey: "navDonation" as const,   text: i.text, amount: i.amount, date: i.date, colorClass: "text-orange-400 bg-orange-950/40 border border-orange-900/30" })),
+    ...withdraw.map(i => ({ typeKey: "navWithdraw" as const,   text: i.text, amount: i.amount, date: i.date, colorClass: "text-cyan-400 bg-cyan-950/40 border border-cyan-900/30" })),
+    ...returnedCash.map(i => ({ typeKey: "navReturnedCash" as const, text: i.text, amount: i.amount, date: i.date, colorClass: "text-rose-400 bg-rose-950/40 border border-rose-900/30" })),
+    ...investment.map(i => ({ typeKey: "navInvestment" as const, text: i.text, amount: i.amount, date: i.date, colorClass: "text-purple-400 bg-purple-950/40 border border-purple-900/30" })),
+    ...reinvestment.map(i => ({ typeKey: "navReinvestment" as const, text: i.text, amount: i.amount, date: i.date, colorClass: "text-amber-400 bg-amber-950/40 border border-amber-900/30" })),
   ]
     .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, 8);
-
-
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -94,26 +128,37 @@ export default function DashboardContent() {
       </div>
 
       {/* ── Summary Cards Grid ─────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-7 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 xl:grid-cols-10 gap-3">
         {summaryCards.map((card) => (
           <Card
             key={card.labelKey}
-            className={`border-l-4 ${card.color} p-4 flex flex-col justify-between hover:scale-102 hover:shadow-lg transition-all duration-300 ${card.glowClass}`}
+            className={`border-l-4 ${card.color} p-4 flex flex-col justify-between hover:scale-102 hover:shadow-lg transition-all duration-300 ${card.glowClass} relative group`}
           >
-            <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-tight">
-              {t(card.labelKey)}
-            </span>
-            <p className={`text-lg font-black mt-3 ${card.textColor}`}>
+            <div className="flex justify-between items-start">
+              <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-tight">
+                {t(card.labelKey)}
+              </span>
+              {card.labelKey === "calcReturnCash" && card.value > 0 && (
+                <button
+                  onClick={() => handleResetReturnedCash(card.value)}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity bg-rose-500/20 hover:bg-rose-500 hover:text-white text-rose-400 text-[8px] px-2 py-0.5 rounded cursor-pointer"
+                  title="Reset to 0"
+                >
+                  Reset
+                </button>
+              )}
+            </div>
+            <p className={`text-sm sm:text-md font-black mt-3 ${card.textColor}`}>
               {t("takaSymbol")} {card.value.toLocaleString()}
             </p>
           </Card>
         ))}
       </div>
 
-      {/* ── Recent Transactions ────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 gap-6">
+      {/* ── Recent Transactions & Stats Grid ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Recent Transactions */}
-        <Card className="flex flex-col">
+        <Card className="lg:col-span-8 flex flex-col">
           <CardHeader className="pb-3 border-0">
             <CardTitle className="text-sm font-bold flex items-center gap-1.5 text-slate-200">
               <ClipboardList className="w-4 h-4 text-slate-400" /> {t("recentTransactions")}
@@ -124,6 +169,7 @@ export default function DashboardContent() {
             <div className="space-y-3">
               {recentTransactions.map((item, idx) => {
                 const config = BADGE_MAP[item.typeKey];
+                if (!config) return null;
                 const Icon = config.icon;
                 return (
                   <div key={idx} className="flex justify-between items-center py-2.5 border-b border-slate-800/40 last:border-0 hover:translate-x-1 transition-transform duration-200 group">
@@ -158,11 +204,9 @@ export default function DashboardContent() {
             )}
           </CardContent>
         </Card>
-      </div>
 
-      {/* ── Quick Stats ───────────────────────────────────────────────────────── */}
-      {(totalIncome > 0 || totalExpense > 0) && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {/* Quick Stats side column */}
+        <div className="lg:col-span-4 space-y-4">
           {/* Profit margin */}
           <Card>
             <CardContent className="p-5">
@@ -189,7 +233,7 @@ export default function DashboardContent() {
               <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-3 flex items-center gap-1.5">
                 <Scale className="w-3.5 h-3.5" /> {t("incomeVsExpense")}
               </p>
-              <div className="flex items-center gap-2 text-xs font-bold mt-1.5">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-bold mt-1.5">
                 <span className="text-emerald-400">{t("navIncome")} {t("takaSymbol")}{totalIncome.toLocaleString()}</span>
                 <span className="text-slate-600">vs</span>
                 <span className="text-red-400">{t("navExpense")} {t("takaSymbol")}{totalExpense.toLocaleString()}</span>
@@ -216,12 +260,12 @@ export default function DashboardContent() {
                 {isDbConnected ? t("dbActive") : t("dbOfflineShort")}
               </div>
               <p className="text-[10px] text-slate-500 mt-3 font-semibold">
-                {t("recordsCount", { count: income.length + expense.length + donation.length + withdraw.length + investment.length })}
+                {t("recordsCount", { count: income.length + expense.length + donation.length + withdraw.length + returnedCash.length + investment.length + reinvestment.length })}
               </p>
             </CardContent>
           </Card>
         </div>
-      )}
+      </div>
     </div>
   );
 }

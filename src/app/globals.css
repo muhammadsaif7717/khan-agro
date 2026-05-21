@@ -120,6 +120,21 @@ body {
   border-color: rgba(168, 85, 247, 0.4);
 }
 
+.glow-recent-profit:hover {
+  box-shadow: 0 0 25px -5px rgba(20, 184, 166, 0.2);
+  border-color: rgba(20, 184, 166, 0.4);
+}
+
+.glow-return-cash:hover {
+  box-shadow: 0 0 25px -5px rgba(244, 63, 94, 0.2);
+  border-color: rgba(244, 63, 94, 0.4);
+}
+
+.glow-reinvestment:hover {
+  box-shadow: 0 0 25px -5px rgba(245, 158, 11, 0.2);
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
 /* Animations */
 @keyframes fadeInUp {
   from {

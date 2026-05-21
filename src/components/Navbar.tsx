@@ -13,17 +13,20 @@ import {
   Calculator,
   StickyNote,
   Wrench,
-  Layers
+  Layers,
+  Coins,
+  Undo2
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
 export const NAV_ITEMS = [
-  { href: "/",          icon: LayoutDashboard, key: "navDashboard" as const },
-  { href: "/income",    icon: TrendingUp,      key: "navIncome" as const },
-  { href: "/expense",   icon: TrendingDown,    key: "navExpense" as const },
-  { href: "/donation",  icon: Gift,            key: "navDonation" as const },
-  { href: "/withdraw",  icon: Landmark,        key: "navWithdraw" as const },
-  { href: "/investment",icon: Briefcase,       key: "navInvestment" as const },
+  { href: "/",              icon: LayoutDashboard, key: "navDashboard" as const },
+  { href: "/income",        icon: TrendingUp,      key: "navIncome" as const },
+  { href: "/expense",       icon: TrendingDown,    key: "navExpense" as const },
+  { href: "/donation",      icon: Gift,            key: "navDonation" as const },
+  { href: "/withdraw",      icon: Landmark,        key: "navWithdraw" as const },
+  { href: "/investment",    icon: Briefcase,       key: "navInvestment" as const },
+  { href: "/reinvestment",  icon: Coins,           key: "navReinvestment" as const },
 ];
 
 export default function Navbar() {

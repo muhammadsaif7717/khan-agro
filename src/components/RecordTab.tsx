@@ -1,16 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useApp } from "@/context/AppContext";
 import { FarmData, RecordItem } from "@/lib/types";
-import { Search, CheckCircle2, Trash2, Calendar, TrendingUp, TrendingDown, Gift, Landmark, Briefcase } from "lucide-react";
+import { Search, CheckCircle2, Trash2, Calendar, TrendingUp, TrendingDown, Gift, Landmark, Briefcase, Coins, Undo2, History } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TranslationKey } from "@/lib/translations";
 
 interface RecordTabProps {
-  type: keyof FarmData;
+  type: Exclude<keyof FarmData, "savedTotals">;
   titleKey: TranslationKey;
   placeholderKey: TranslationKey;
   accentClass: string;         // e.g. "text-emerald-400"
@@ -24,6 +24,8 @@ const ICON_MAP = {
   donation: Gift,
   withdraw: Landmark,
   investment: Briefcase,
+  reinvestment: Coins,
+  returnedCash: Undo2,
 };
 
 function getTodayDate() {
@@ -46,21 +48,73 @@ function filterRecords(list: RecordItem[], query: string) {
 export default function RecordTab({
   type, titleKey, placeholderKey, accentClass, borderHoverClass, buttonLabelKey,
 }: RecordTabProps) {
-  const { isDbConnected, addItem, deleteItem, income, expense, donation, withdraw, investment, t, language } = useApp();
+  const {
+    isDbConnected,
+    addItem,
+    deleteItem,
+    income,
+    expense,
+    donation,
+    withdraw,
+    investment,
+    reinvestment,
+    returnedCash,
+    savedTotals,
+    saveAndResetCategory,
+    deleteSavedTotal,
+    t,
+    language
+  } = useApp();
 
-  const Icon = ICON_MAP[type];
-  
-  // Pick the correct list based on type
-  const listMap: Record<keyof FarmData, RecordItem[]> = { income, expense, donation, withdraw, investment };
-  const list: RecordItem[] = listMap[type];
-
-  const [form, setForm] = useState({ text: "", amount: "", date: getTodayDate() });
+  const [activeType, setActiveType] = useState<Exclude<keyof FarmData, "savedTotals">>(type);
+  const [form, setForm] = useState<{
+    text: string;
+    amount: string;
+    date: string;
+    investmentType?: "investment" | "reinvestment";
+  }>({
+    text: "",
+    amount: "",
+    date: getTodayDate(),
+    investmentType: type === "reinvestment" ? "reinvestment" : "investment"
+  });
   const [query, setQuery] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [resetNote, setResetNote] = useState("");
+
+  // Sync activeType when type prop changes
+  useEffect(() => {
+    setActiveType(type);
+    setForm(prev => ({
+      ...prev,
+      investmentType: type === "reinvestment" ? "reinvestment" : "investment"
+    }));
+  }, [type]);
+
+  const handleTypeChange = (newType: Exclude<keyof FarmData, "savedTotals">) => {
+    setActiveType(newType);
+    setForm(prev => ({
+      ...prev,
+      investmentType: newType as "investment" | "reinvestment"
+    }));
+  };
+
+  const Icon = ICON_MAP[activeType] || Briefcase;
+  
+  // Pick the correct list based on activeType
+  const listMap: Record<Exclude<keyof FarmData, "savedTotals">, RecordItem[]> = {
+    income, expense, donation, withdraw, investment, reinvestment, returnedCash
+  };
+  const list: RecordItem[] = listMap[activeType] || [];
 
   const filtered = filterRecords(list, query);
   const total = list.reduce((s, i) => s + i.amount, 0);
   const filteredTotal = filtered.reduce((s, { item }) => s + item.amount, 0);
+
+  // Saved Totals calculation
+  const savedList = savedTotals[activeType] || [];
+  const savedTotalSum = savedList.reduce((sum, item) => sum + item.amount, 0);
+  const grandTotal = total + savedTotalSum;
 
   const percent = total > 0 ? (filteredTotal / total) * 100 : 0;
   const formattedPercent = percent.toFixed(2);
@@ -68,101 +122,185 @@ export default function RecordTab({
     ? formattedPercent.replace(/\d/g, (d) => "০১২৩৪৫৬৭৮৯"[Number(d)]) + "%"
     : formattedPercent + "%";
 
+  const currentAccentClass = (activeType === "investment") 
+    ? "text-purple-400" 
+    : (activeType === "reinvestment") 
+      ? "text-amber-400" 
+      : accentClass;
+
+  const currentBorderHoverClass = (activeType === "investment")
+    ? "hover:border-purple-500/30"
+    : (activeType === "reinvestment")
+      ? "hover:border-amber-500/30"
+      : borderHoverClass;
+
   const handleAdd = async () => {
     if (!form.text.trim() || !form.amount) {
       alert(t("pleaseFillAll"));
       return;
     }
     setIsSaving(true);
-    await addItem(type, form.text, Number(form.amount), form.date || getTodayDate());
-    setForm({ text: "", amount: "", date: getTodayDate() });
+    const submitType = activeType;
+    await addItem(submitType, form.text, Number(form.amount), form.date || getTodayDate());
+    setForm(prev => ({
+      ...prev,
+      text: "",
+      amount: "",
+      date: getTodayDate()
+    }));
     setIsSaving(false);
   };
 
   const handleDelete = async (origIdx: number) => {
     if (!confirm(t("confirmDelete"))) return;
-    await deleteItem(type, origIdx);
+    await deleteItem(activeType, origIdx);
+  };
+
+  const handleSaveReset = async () => {
+    if (total === 0) return;
+    if (!confirm(language === "bn" ? "আপনি কি নিশ্চিতভাবে এই মোট হিসাব সেভ করে সক্রিয় তালিকা রিসেট করতে চান?" : "Are you sure you want to save this total and reset active list?")) return;
+    await saveAndResetCategory(activeType, resetNote);
+    setResetNote("");
+  };
+
+  const handleSavedDelete = async (idx: number) => {
+    if (!confirm(t("confirmDelete"))) return;
+    await deleteSavedTotal(activeType, idx);
   };
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-        <h2 className="text-xl font-bold flex items-center gap-2 text-slate-100">
-          <Icon className={`w-6 h-6 ${accentClass}`} /> {t(titleKey)}
-        </h2>
-        <span className={`text-sm font-black ${accentClass}`}>{t("takaSymbol")} {total.toLocaleString()}</span>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800 pb-4 gap-4">
+        <div className="flex items-center gap-3">
+          <h2 className="text-xl font-bold flex items-center gap-2 text-slate-100">
+            <Icon className={`w-6 h-6 ${currentAccentClass}`} /> 
+            {activeType === "investment" ? t("navInvestment") : activeType === "reinvestment" ? t("navReinvestment") : t(titleKey)}
+          </h2>
+        </div>
+
+        <div className="text-right flex items-center gap-6">
+          <div className="text-left sm:text-right">
+            <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">{t("grandTotal")}</span>
+            <span className={`text-lg font-black ${currentAccentClass}`}>{t("takaSymbol")} {grandTotal.toLocaleString()}</span>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* ── Shadcn Form Card ── */}
-        <Card className="lg:col-span-5 xl:col-span-4 lg:sticky lg:top-20">
-          <CardHeader className="pb-3 border-0">
-            <CardTitle className="text-sm font-bold flex items-center gap-1.5 uppercase tracking-wide text-slate-200">
-              {t("recordEntry")}
-            </CardTitle>
-            <CardDescription>{t("recordEntryDesc")}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-1.5">
-              <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">
-                {type === "investment"
-                  ? (language === "bn" ? "ব্যক্তির নাম" : "Investor's Name")
-                  : t("descLabel")}
-              </label>
-              <Input
-                type="text"
-                placeholder={t(placeholderKey)}
-                value={form.text}
-                onChange={(e) => setForm({ ...form, text: e.target.value })}
-                onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">
-                {t("amountLabel")}
-              </label>
-              <Input
-                type="number"
-                placeholder={t("amountPlaceholder")}
-                value={form.amount}
-                onChange={(e) => setForm({ ...form, amount: e.target.value })}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">
-                {t("dateLabel")}
-              </label>
-              <Input
-                type="date"
-                value={form.date}
-                onChange={(e) => setForm({ ...form, date: e.target.value })}
-              />
-            </div>
-            <Button
-              onClick={handleAdd}
-              disabled={isDbConnected === false || isSaving}
-              variant="emerald"
-              className="w-full h-11 text-xs rounded-xl mt-3 flex items-center justify-center gap-2"
-            >
-              {isSaving ? (
-                <>
-                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                  {t("saving")}
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="w-4 h-4" /> {t(buttonLabelKey)}
-                </>
-              )}
-            </Button>
-          </CardContent>
-        </Card>
+        {/* ── Left Column (Form Card & Save & Reset Card) ── */}
+        <div className="lg:col-span-5 xl:col-span-4 lg:sticky lg:top-20 space-y-4">
+          <Card>
+            <CardHeader className="pb-3 border-0">
+              <CardTitle className="text-sm font-bold flex items-center gap-1.5 uppercase tracking-wide text-slate-200">
+                {t("recordEntry")}
+              </CardTitle>
+              <CardDescription>{t("recordEntryDesc")}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">
+                  {activeType === "investment"
+                    ? (language === "bn" ? "ব্যক্তির নাম" : "Investor's Name")
+                    : t("descLabel")}
+                </label>
+                <Input
+                  type="text"
+                  placeholder={activeType === "investment" ? t("investmentPlaceholder") : activeType === "reinvestment" ? t("reinvestmentPlaceholder") : t(placeholderKey)}
+                  value={form.text}
+                  onChange={(e) => setForm({ ...form, text: e.target.value })}
+                  onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+                />
+              </div>
 
-        {/* ── Shadcn Records List ── */}
-        <div className="lg:col-span-7 xl:col-span-8 space-y-4">
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">
+                  {t("amountLabel")}
+                </label>
+                <Input
+                  type="number"
+                  placeholder={t("amountPlaceholder")}
+                  value={form.amount}
+                  onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">
+                  {t("dateLabel")}
+                </label>
+                <Input
+                  type="date"
+                  value={form.date}
+                  onChange={(e) => setForm({ ...form, date: e.target.value })}
+                />
+              </div>
+              <Button
+                onClick={handleAdd}
+                disabled={isDbConnected === false || isSaving}
+                variant="emerald"
+                className="w-full h-11 text-xs rounded-xl mt-3 flex items-center justify-center gap-2"
+              >
+                {isSaving ? (
+                  <>
+                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    {t("saving")}
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4" /> {activeType === "investment" ? t("investmentConfirm") : activeType === "reinvestment" ? t("reinvestmentConfirm") : t(buttonLabelKey)}
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* ── Save & Reset Card ── */}
+          <Card>
+            <CardHeader className="pb-2 border-0">
+              <CardTitle className="text-xs font-black uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                <History className="w-3.5 h-3.5 text-yellow-500" />
+                {t("resetOption")}
+              </CardTitle>
+              <CardDescription className="text-[10px]">
+                {language === "bn"
+                  ? "চলতি চক্রের হিসাব সংরক্ষণ করে সক্রিয় তালিকা রিসেট করুন।"
+                  : "Save the current cycle total and reset active list."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="space-y-1">
+                <Input
+                  type="text"
+                  placeholder={language === "bn" ? "যেমন: চক্র ১, মে ২০২৬..." : "e.g., Batch 1, May 2026..."}
+                  value={resetNote}
+                  onChange={(e) => setResetNote(e.target.value)}
+                  className="h-8 text-xs"
+                />
+              </div>
+              <div className="flex justify-between items-center gap-3">
+                <div className="text-left">
+                  <span className="text-[9px] text-slate-400 font-bold block uppercase tracking-wide">{t("activeTotal")}</span>
+                  <span className="text-xs font-extrabold text-slate-200">{t("takaSymbol")} {total.toLocaleString()}</span>
+                </div>
+                <Button
+                  onClick={handleSaveReset}
+                  disabled={total === 0 || isDbConnected === false}
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs font-bold bg-yellow-500/10 hover:bg-yellow-500 hover:text-black border-yellow-500/30 text-yellow-400 rounded-lg flex items-center gap-1"
+                >
+                  {t("saveReset")}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* ── Right Column (Records List & Saved History) ── */}
+        <div className="lg:col-span-7 xl:col-span-8 space-y-6">
           <div className="relative">
             <Input
               type="text"
@@ -180,19 +318,19 @@ export default function RecordTab({
             <div className="flex flex-col gap-2.5 px-4 py-3.5 bg-[#0e1626]/80 border border-slate-800 rounded-xl animate-fade-in shadow-sm">
               <div className="flex items-center justify-between text-xs font-bold text-slate-300">
                 <span className="flex items-center gap-2">
-                  <span className={`w-2 h-2 rounded-full ${accentClass.replace("text-", "bg-")} shadow-[0_0_8px_currentColor] animate-pulse`} />
+                  <span className={`w-2 h-2 rounded-full ${currentAccentClass.replace("text-", "bg-")} shadow-[0_0_8px_currentColor] animate-pulse`} />
                   <span>
                     {language === "bn"
                       ? `${filtered.length} টি রেকর্ড পাওয়া গেছে`
                       : `${filtered.length} records found`}
                   </span>
                 </span>
-                <span className={`${accentClass} font-black text-sm`}>
+                <span className={`${currentAccentClass} font-black text-sm`}>
                   {language === "bn" ? "মোট: " : "Total: "} {t("takaSymbol")} {filteredTotal.toLocaleString()}
                 </span>
               </div>
               
-              {type === "investment" && total > 0 && (
+              {activeType === "investment" && total > 0 && (
                 <div className="text-[11px] text-slate-400 border-t border-slate-800/60 pt-2 flex items-center justify-between font-bold">
                   <span>
                     {language === "bn" ? "বিনিয়োগকারী হিসাব বিশ্লেষণ" : "Investor Share Analysis"}
@@ -207,36 +345,77 @@ export default function RecordTab({
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {filtered.map(({ item, origIdx }) => (
-              <Card
-                key={origIdx}
-                className={`p-4 bg-[#0e1626]/80 flex justify-between items-center transition-all duration-300 hover:scale-[1.01] hover:shadow-lg ${borderHoverClass}`}
-              >
-                <div>
-                  <p className="font-bold text-xs text-slate-200">{item.text}</p>
-                  <p className={`font-black text-sm mt-0.5 ${accentClass}`}>{t("takaSymbol")} {item.amount.toLocaleString()}</p>
-                  <p className="text-[10px] text-slate-400 mt-1 flex items-center gap-1 font-semibold">
-                    <Calendar className="w-3.5 h-3.5" /> {item.date || ""}
-                  </p>
-                </div>
-                <Button
-                  onClick={() => handleDelete(origIdx)}
-                  disabled={isDbConnected === false}
-                  variant="destructive"
-                  size="icon"
-                  className="rounded-xl shrink-0 h-9 w-9 flex items-center justify-center transition-transform hover:scale-105 active:scale-95"
+          <div className="space-y-4">
+            <h3 className="text-xs font-black uppercase tracking-wider text-slate-400">
+              {language === "bn" ? "চলতি সক্রিয় রেকর্ডসমূহ" : "Active Records"}
+            </h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {filtered.map(({ item, origIdx }) => (
+                <Card
+                  key={origIdx}
+                  className={`p-4 bg-[#0e1626]/80 flex justify-between items-center transition-all duration-300 hover:scale-[1.01] hover:shadow-lg ${currentBorderHoverClass}`}
                 >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </Card>
-            ))}
-            {filtered.length === 0 && (
-              <p className="col-span-full text-center text-slate-500 text-sm py-16">
-                {t("noRecords")}
-              </p>
-            )}
+                  <div>
+                    <p className="font-bold text-xs text-slate-200">{item.text}</p>
+                    <p className={`font-black text-sm mt-0.5 ${currentAccentClass}`}>{t("takaSymbol")} {item.amount.toLocaleString()}</p>
+                    <p className="text-[10px] text-slate-400 mt-1 flex items-center gap-1 font-semibold">
+                      <Calendar className="w-3.5 h-3.5" /> {item.date || ""}
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() => handleDelete(origIdx)}
+                    disabled={isDbConnected === false}
+                    variant="destructive"
+                    size="icon"
+                    className="rounded-xl shrink-0 h-9 w-9 flex items-center justify-center transition-transform hover:scale-105 active:scale-95"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </Card>
+              ))}
+              {filtered.length === 0 && (
+                <p className="col-span-full text-center text-slate-500 text-sm py-8 bg-[#0e1626]/40 rounded-xl border border-slate-800/40">
+                  {t("noRecords")}
+                </p>
+              )}
+            </div>
           </div>
+
+          {/* ── Saved Totals History Section ── */}
+          {savedList.length > 0 && (
+            <div className="space-y-3 pt-4 border-t border-slate-800/80">
+              <h3 className="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                <History className="w-3.5 h-3.5 text-yellow-500 animate-pulse" />
+                {t("savedTotalsTitle")}
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 animate-fade-in">
+                {savedList.map((savedItem, sIdx) => (
+                  <Card
+                    key={sIdx}
+                    className="p-4 bg-[#0e1626]/40 border-slate-800 flex justify-between items-center transition-all duration-300 hover:scale-[1.01]"
+                  >
+                    <div>
+                      <p className="font-bold text-xs text-slate-200">{savedItem.note}</p>
+                      <p className={`font-black text-sm mt-0.5 ${currentAccentClass}`}>{t("takaSymbol")} {savedItem.amount.toLocaleString()}</p>
+                      <p className="text-[10px] text-slate-400 mt-1 flex items-center gap-1 font-semibold">
+                        <Calendar className="w-3.5 h-3.5" /> {savedItem.date || ""}
+                      </p>
+                    </div>
+                    <Button
+                      onClick={() => handleSavedDelete(sIdx)}
+                      disabled={isDbConnected === false}
+                      variant="destructive"
+                      size="icon"
+                      className="rounded-xl shrink-0 h-9 w-9 flex items-center justify-center transition-transform hover:scale-105 active:scale-95"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

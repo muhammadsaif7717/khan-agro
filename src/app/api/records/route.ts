@@ -14,7 +14,10 @@ export async function GET() {
         expense: [],
         donation: [],
         withdraw: [],
-        investment: []
+        investment: [],
+        reinvestment: [],
+        returnedCash: [],
+        savedTotals: {}
       });
     }
     
@@ -30,6 +33,9 @@ export async function GET() {
       donation: [],
       withdraw: [],
       investment: [],
+      reinvestment: [],
+      returnedCash: [],
+      savedTotals: {},
       dbOffline: true
     });
   }
@@ -41,7 +47,7 @@ export async function POST(request: Request) {
     const client = await clientPromise;
     const db = client.db(dbName);
     
-    const { income, expense, donation, withdraw, investment } = body;
+    const { income, expense, donation, withdraw, investment, reinvestment, returnedCash, savedTotals } = body;
     
     // Validate inputs
     const payload = {
@@ -50,6 +56,9 @@ export async function POST(request: Request) {
       donation: Array.isArray(donation) ? donation : [],
       withdraw: Array.isArray(withdraw) ? withdraw : [],
       investment: Array.isArray(investment) ? investment : [],
+      reinvestment: Array.isArray(reinvestment) ? reinvestment : [],
+      returnedCash: Array.isArray(returnedCash) ? returnedCash : [],
+      savedTotals: savedTotals && typeof savedTotals === "object" ? savedTotals : {},
       updatedAt: new Date().toISOString()
     };
     
