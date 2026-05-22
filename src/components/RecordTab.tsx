@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { TranslationKey } from "@/lib/translations";
 
 interface RecordTabProps {
-  type: Exclude<keyof FarmData, "savedTotals">;
+  type: Exclude<keyof FarmData, "savedTotals" | "notes" | "assets" | "calcHistory">;
   titleKey: TranslationKey;
   placeholderKey: TranslationKey;
   accentClass: string;         // e.g. "text-emerald-400"
@@ -66,7 +66,7 @@ export default function RecordTab({
     language
   } = useApp();
 
-  const [activeType, setActiveType] = useState<Exclude<keyof FarmData, "savedTotals">>(type);
+  const [activeType, setActiveType] = useState<Exclude<keyof FarmData, "savedTotals" | "notes" | "assets" | "calcHistory">>(type);
   const [form, setForm] = useState<{
     text: string;
     amount: string;
@@ -91,7 +91,7 @@ export default function RecordTab({
     }));
   }, [type]);
 
-  const handleTypeChange = (newType: Exclude<keyof FarmData, "savedTotals">) => {
+  const handleTypeChange = (newType: Exclude<keyof FarmData, "savedTotals" | "notes" | "assets" | "calcHistory">) => {
     setActiveType(newType);
     setForm(prev => ({
       ...prev,
@@ -102,7 +102,7 @@ export default function RecordTab({
   const Icon = ICON_MAP[activeType] || Briefcase;
   
   // Pick the correct list based on activeType
-  const listMap: Record<Exclude<keyof FarmData, "savedTotals">, RecordItem[]> = {
+  const listMap: Record<Exclude<keyof FarmData, "savedTotals" | "notes" | "assets" | "calcHistory">, RecordItem[]> = {
     income, expense, donation, withdraw, investment, reinvestment, returnedCash
   };
   const list: RecordItem[] = listMap[activeType] || [];
@@ -170,9 +170,9 @@ export default function RecordTab({
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800 pb-4 gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-border pb-4 gap-4">
         <div className="flex items-center gap-3">
-          <h2 className="text-xl font-bold flex items-center gap-2 text-slate-100">
+          <h2 className="text-xl font-bold flex items-center gap-2 text-text-primary">
             <Icon className={`w-6 h-6 ${currentAccentClass}`} /> 
             {activeType === "investment" ? t("navInvestment") : activeType === "reinvestment" ? t("navReinvestment") : t(titleKey)}
           </h2>
@@ -180,7 +180,7 @@ export default function RecordTab({
 
         <div className="text-right flex items-center gap-6">
           <div className="text-left sm:text-right">
-            <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">{t("grandTotal")}</span>
+            <span className="text-[10px] text-text-muted font-bold block uppercase tracking-wider">{t("grandTotal")}</span>
             <span className={`text-lg font-black ${currentAccentClass}`}>{t("takaSymbol")} {grandTotal.toLocaleString()}</span>
           </div>
         </div>
@@ -191,14 +191,14 @@ export default function RecordTab({
         <div className="lg:col-span-5 xl:col-span-4 lg:sticky lg:top-20 space-y-4">
           <Card>
             <CardHeader className="pb-3 border-0">
-              <CardTitle className="text-sm font-bold flex items-center gap-1.5 uppercase tracking-wide text-slate-200">
+              <CardTitle className="text-sm font-bold flex items-center gap-1.5 uppercase tracking-wide text-text-primary">
                 {t("recordEntry")}
               </CardTitle>
               <CardDescription>{t("recordEntryDesc")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-1.5">
-                <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">
+                <label className="text-[10px] text-text-muted font-bold uppercase tracking-wider block">
                   {activeType === "investment"
                     ? (language === "bn" ? "ব্যক্তির নাম" : "Investor's Name")
                     : t("descLabel")}
@@ -214,7 +214,7 @@ export default function RecordTab({
 
 
               <div className="space-y-1.5">
-                <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">
+                <label className="text-[10px] text-text-muted font-bold uppercase tracking-wider block">
                   {t("amountLabel")}
                 </label>
                 <Input
@@ -225,7 +225,7 @@ export default function RecordTab({
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">
+                <label className="text-[10px] text-text-muted font-bold uppercase tracking-wider block">
                   {t("dateLabel")}
                 </label>
                 <Input
@@ -258,45 +258,47 @@ export default function RecordTab({
           </Card>
 
           {/* ── Save & Reset Card ── */}
-          <Card>
-            <CardHeader className="pb-2 border-0">
-              <CardTitle className="text-xs font-black uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-                <History className="w-3.5 h-3.5 text-yellow-500" />
-                {t("resetOption")}
-              </CardTitle>
-              <CardDescription className="text-[10px]">
-                {language === "bn"
-                  ? "চলতি চক্রের হিসাব সংরক্ষণ করে সক্রিয় তালিকা রিসেট করুন।"
-                  : "Save the current cycle total and reset active list."}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="space-y-1">
-                <Input
-                  type="text"
-                  placeholder={language === "bn" ? "যেমন: চক্র ১, মে ২০২৬..." : "e.g., Batch 1, May 2026..."}
-                  value={resetNote}
-                  onChange={(e) => setResetNote(e.target.value)}
-                  className="h-8 text-xs"
-                />
-              </div>
-              <div className="flex justify-between items-center gap-3">
-                <div className="text-left">
-                  <span className="text-[9px] text-slate-400 font-bold block uppercase tracking-wide">{t("activeTotal")}</span>
-                  <span className="text-xs font-extrabold text-slate-200">{t("takaSymbol")} {total.toLocaleString()}</span>
+          {activeType === "returnedCash" && (
+            <Card>
+              <CardHeader className="pb-2 border-0">
+                <CardTitle className="text-xs font-black uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
+                  <History className="w-3.5 h-3.5 text-yellow-500" />
+                  {t("resetOption")}
+                </CardTitle>
+                <CardDescription className="text-[10px]">
+                  {language === "bn"
+                    ? "চলতি চক্রের হিসাব সংরক্ষণ করে সক্রিয় তালিকা রিসেট করুন।"
+                    : "Save the current cycle total and reset active list."}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="space-y-1">
+                  <Input
+                    type="text"
+                    placeholder={language === "bn" ? "যেমন: চক্র ১, মে ২০২৬..." : "e.g., Batch 1, May 2026..."}
+                    value={resetNote}
+                    onChange={(e) => setResetNote(e.target.value)}
+                    className="h-8 text-xs"
+                  />
                 </div>
-                <Button
-                  onClick={handleSaveReset}
-                  disabled={total === 0 || isDbConnected === false}
-                  variant="outline"
-                  size="sm"
-                  className="h-8 text-xs font-bold bg-yellow-500/10 hover:bg-yellow-500 hover:text-black border-yellow-500/30 text-yellow-400 rounded-lg flex items-center gap-1"
-                >
-                  {t("saveReset")}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+                <div className="flex justify-between items-center gap-3">
+                  <div className="text-left">
+                    <span className="text-[9px] text-text-muted font-bold block uppercase tracking-wide">{t("activeTotal")}</span>
+                    <span className="text-xs font-extrabold text-text-primary">{t("takaSymbol")} {total.toLocaleString()}</span>
+                  </div>
+                  <Button
+                    onClick={handleSaveReset}
+                    disabled={total === 0 || isDbConnected === false}
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs font-bold bg-yellow-500/10 hover:bg-yellow-500 hover:text-black border-yellow-500/30 text-yellow-400 rounded-lg flex items-center gap-1"
+                  >
+                    {t("saveReset")}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* ── Right Column (Records List & Saved History) ── */}
@@ -307,16 +309,16 @@ export default function RecordTab({
               placeholder={t("searchPlaceholder")}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="pl-10 h-10 text-xs bg-[#0e1626] border-slate-800 focus:border-emerald-500 rounded-xl"
+              className="pl-10 h-10 text-xs bg-surface border-border focus:border-emerald-500 rounded-xl"
             />
-            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted">
               <Search className="w-4 h-4" />
             </span>
           </div>
 
           {query.trim() !== "" && (
-            <div className="flex flex-col gap-2.5 px-4 py-3.5 bg-[#0e1626]/80 border border-slate-800 rounded-xl animate-fade-in shadow-sm">
-              <div className="flex items-center justify-between text-xs font-bold text-slate-300">
+            <div className="flex flex-col gap-2.5 px-4 py-3.5 bg-surface/80 border border-border rounded-xl animate-fade-in shadow-sm">
+              <div className="flex items-center justify-between text-xs font-bold text-text-secondary">
                 <span className="flex items-center gap-2">
                   <span className={`w-2 h-2 rounded-full ${currentAccentClass.replace("text-", "bg-")} shadow-[0_0_8px_currentColor] animate-pulse`} />
                   <span>
@@ -331,7 +333,7 @@ export default function RecordTab({
               </div>
               
               {activeType === "investment" && total > 0 && (
-                <div className="text-[11px] text-slate-400 border-t border-slate-800/60 pt-2 flex items-center justify-between font-bold">
+                <div className="text-[11px] text-text-muted border-t border-border/60 pt-2 flex items-center justify-between font-bold">
                   <span>
                     {language === "bn" ? "বিনিয়োগকারী হিসাব বিশ্লেষণ" : "Investor Share Analysis"}
                   </span>
@@ -346,7 +348,7 @@ export default function RecordTab({
           )}
 
           <div className="space-y-4">
-            <h3 className="text-xs font-black uppercase tracking-wider text-slate-400">
+            <h3 className="text-xs font-black uppercase tracking-wider text-text-muted">
               {language === "bn" ? "চলতি সক্রিয় রেকর্ডসমূহ" : "Active Records"}
             </h3>
             
@@ -354,12 +356,12 @@ export default function RecordTab({
               {filtered.map(({ item, origIdx }) => (
                 <Card
                   key={origIdx}
-                  className={`p-4 bg-[#0e1626]/80 flex justify-between items-center transition-all duration-300 hover:scale-[1.01] hover:shadow-lg ${currentBorderHoverClass}`}
+                  className={`p-4 bg-surface/80 flex justify-between items-center transition-all duration-300 hover:scale-[1.01] hover:shadow-lg ${currentBorderHoverClass}`}
                 >
                   <div>
-                    <p className="font-bold text-xs text-slate-200">{item.text}</p>
+                    <p className="font-bold text-xs text-text-primary">{item.text}</p>
                     <p className={`font-black text-sm mt-0.5 ${currentAccentClass}`}>{t("takaSymbol")} {item.amount.toLocaleString()}</p>
-                    <p className="text-[10px] text-slate-400 mt-1 flex items-center gap-1 font-semibold">
+                    <p className="text-[10px] text-text-muted mt-1 flex items-center gap-1 font-semibold">
                       <Calendar className="w-3.5 h-3.5" /> {item.date || ""}
                     </p>
                   </div>
@@ -375,7 +377,7 @@ export default function RecordTab({
                 </Card>
               ))}
               {filtered.length === 0 && (
-                <p className="col-span-full text-center text-slate-500 text-sm py-8 bg-[#0e1626]/40 rounded-xl border border-slate-800/40">
+                <p className="col-span-full text-center text-text-muted text-sm py-8 bg-surface/40 rounded-xl border border-border/40">
                   {t("noRecords")}
                 </p>
               )}
@@ -384,8 +386,8 @@ export default function RecordTab({
 
           {/* ── Saved Totals History Section ── */}
           {savedList.length > 0 && (
-            <div className="space-y-3 pt-4 border-t border-slate-800/80">
-              <h3 className="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+            <div className="space-y-3 pt-4 border-t border-border/80">
+              <h3 className="text-xs font-black uppercase tracking-wider text-text-muted flex items-center gap-1.5">
                 <History className="w-3.5 h-3.5 text-yellow-500 animate-pulse" />
                 {t("savedTotalsTitle")}
               </h3>
@@ -393,12 +395,12 @@ export default function RecordTab({
                 {savedList.map((savedItem, sIdx) => (
                   <Card
                     key={sIdx}
-                    className="p-4 bg-[#0e1626]/40 border-slate-800 flex justify-between items-center transition-all duration-300 hover:scale-[1.01]"
+                    className="p-4 bg-surface/40 border-border flex justify-between items-center transition-all duration-300 hover:scale-[1.01]"
                   >
                     <div>
-                      <p className="font-bold text-xs text-slate-200">{savedItem.note}</p>
+                      <p className="font-bold text-xs text-text-primary">{savedItem.note}</p>
                       <p className={`font-black text-sm mt-0.5 ${currentAccentClass}`}>{t("takaSymbol")} {savedItem.amount.toLocaleString()}</p>
-                      <p className="text-[10px] text-slate-400 mt-1 flex items-center gap-1 font-semibold">
+                      <p className="text-[10px] text-text-muted mt-1 flex items-center gap-1 font-semibold">
                         <Calendar className="w-3.5 h-3.5" /> {savedItem.date || ""}
                       </p>
                     </div>

@@ -15,11 +15,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
 export default function CalculatorPage() {
-  const { t, language } = useApp();
+  const { t, language, calcHistory, setCalcHistory, saveAllData } = useApp();
 
   const [calcInput, setCalcInput] = useState("");
   const [calcResult, setCalcResult] = useState("");
-  const [calcHistory, setCalcHistory] = useState<string[]>([]);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
   const handleCalcClick = (val: string) => {
@@ -47,7 +46,9 @@ export default function CalculatorPage() {
         } else {
           const finalRes = Number(res.toFixed(4)).toString();
           setCalcResult(finalRes);
-          setCalcHistory((prev) => [`${calcInput} = ${finalRes}`, ...prev].slice(0, 15));
+          const newHist = [`${calcInput} = ${finalRes}`, ...calcHistory].slice(0, 15);
+          setCalcHistory(newHist);
+          saveAllData(undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, newHist);
         }
       } catch {
         setCalcResult("Error");
@@ -112,12 +113,12 @@ export default function CalculatorPage() {
   return (
     <div className="space-y-6 animate-fade-in max-w-5xl mx-auto select-none">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-slate-800/80 pb-4">
-        <h2 className="text-xl font-bold flex items-center gap-2 text-slate-100">
+      <div className="flex items-center justify-between border-b border-border/80 pb-4">
+        <h2 className="text-xl font-bold flex items-center gap-2 text-text-primary">
           <Calculator className="w-6 h-6 text-emerald-400 animate-spin-slow" /> 
           {language === "bn" ? "অ্যাডভান্সড হিসাবরক্ষক ক্যালকুলেটর" : "Advanced Accounting Calculator"}
         </h2>
-        <span className="text-[10px] text-slate-450 font-black uppercase tracking-widest bg-emerald-500/10 px-3 py-1 border border-emerald-500/20 rounded-full">
+        <span className="text-[10px] text-text-muted font-black uppercase tracking-widest bg-emerald-500/10 px-3 py-1 border border-emerald-500/20 rounded-full">
           {language === "bn" ? "অ্যাকাউন্টিং মোড" : "Accounting Mode"}
         </span>
       </div>
@@ -126,14 +127,14 @@ export default function CalculatorPage() {
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
         
         {/* Main Advanced Calculator Layout Card */}
-        <Card className="md:col-span-7 bg-[#0e1626]/60 backdrop-blur border-slate-800/80 shadow-2xl rounded-3xl p-5 overflow-hidden">
+        <Card className="md:col-span-7 bg-surface/60 backdrop-blur border-border/80 shadow-2xl rounded-3xl p-5 overflow-hidden">
           
           {/* LED Display Screen */}
-          <div className="bg-[#070b13] border border-slate-800/60 rounded-2xl p-4 text-right mb-5 relative min-h-[110px] flex flex-col justify-end shadow-inner">
-            <span className="text-[9px] text-slate-500 uppercase tracking-widest font-black absolute top-2 left-3">
+          <div className="bg-bg border border-border/60 rounded-2xl p-4 text-right mb-5 relative min-h-[110px] flex flex-col justify-end shadow-inner">
+            <span className="text-[9px] text-text-muted uppercase tracking-widest font-black absolute top-2 left-3">
               LED DIGITAL SCREEN
             </span>
-            <div className="text-slate-400 font-mono text-base tracking-wide break-all min-h-[24px]">
+            <div className="text-text-muted font-mono text-base tracking-wide break-all min-h-[24px]">
               {calcInput || "0"}
             </div>
             <div className="text-emerald-400 font-mono text-3xl font-black mt-2 break-all">
@@ -192,20 +193,23 @@ export default function CalculatorPage() {
         </Card>
 
         {/* Dynamic Reuse History Dashboard Card */}
-        <Card className="md:col-span-5 flex flex-col max-h-[420px] bg-[#0e1626]/60 backdrop-blur border-slate-800/80 shadow-2xl rounded-3xl p-5 overflow-hidden">
-          <CardHeader className="p-0 pb-3 border-b border-slate-800/60">
-            <CardTitle className="text-sm font-bold flex items-center justify-between text-slate-200">
+        <Card className="md:col-span-5 flex flex-col max-h-[420px] bg-surface/60 backdrop-blur border-border/80 shadow-2xl rounded-3xl p-5 overflow-hidden">
+          <CardHeader className="p-0 pb-3 border-b border-border/60">
+            <CardTitle className="text-sm font-bold flex items-center justify-between text-text-primary">
               <span className="flex items-center gap-1.5 font-black">
-                <RotateCcw className="w-4 h-4 text-slate-450" /> 
+                <RotateCcw className="w-4 h-4 text-text-muted" /> 
                 {language === "bn" ? "হিসাবের ইতিহাস" : "Calculation History"}
               </span>
               {calcHistory.length > 0 && (
-                <Button onClick={() => setCalcHistory([])} variant="ghost" size="icon" className="h-8 w-8 text-red-400 hover:text-red-300">
+                <Button onClick={() => {
+                  setCalcHistory([]);
+                  saveAllData(undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, []);
+                }} variant="ghost" size="icon" className="h-8 w-8 text-red-400 hover:text-red-300">
                   <Trash2 className="w-4 h-4" />
                 </Button>
               )}
             </CardTitle>
-            <p className="text-[9px] text-slate-450 mt-1 font-semibold uppercase tracking-wider">
+            <p className="text-[9px] text-text-muted mt-1 font-semibold uppercase tracking-wider">
               {language === "bn" ? "পুনরায় ব্যবহার করতে আইটেমের উপর ক্লিক করুন" : "Click on any item to reload or reuse"}
             </p>
           </CardHeader>
@@ -214,7 +218,7 @@ export default function CalculatorPage() {
               {calcHistory.map((item, idx) => (
                 <div 
                   key={idx} 
-                  className="group flex items-center justify-between font-mono text-xs text-slate-300 py-2.5 px-3 rounded-xl border border-transparent hover:border-slate-850 hover:bg-[#070b13]/55 transition-all cursor-pointer"
+                  className="group flex items-center justify-between font-mono text-xs text-text-secondary py-2.5 px-3 rounded-xl border border-transparent hover:border-border hover:bg-surface-hover/55 transition-all cursor-pointer"
                   onClick={() => handleHistoryClick(item)}
                 >
                   <span className="break-all select-all flex-1 font-bold pr-2">{item}</span>
@@ -223,7 +227,7 @@ export default function CalculatorPage() {
                       e.stopPropagation();
                       handleCopyHistory(item, idx);
                     }}
-                    className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 transition-all shrink-0"
+                    className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg bg-surface-hover border border-border text-text-muted hover:text-text-primary transition-all shrink-0"
                     title="Copy calculation"
                   >
                     {copiedIndex === idx ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
@@ -231,7 +235,7 @@ export default function CalculatorPage() {
                 </div>
               ))}
               {calcHistory.length === 0 && (
-                <p className="text-slate-500 text-xs text-center py-20">
+                <p className="text-text-muted text-xs text-center py-20">
                   {language === "bn" ? "কোনো ইতিহাস নেই।" : "No calculations recorded."}
                 </p>
               )}

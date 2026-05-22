@@ -18,12 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-interface Asset {
-  id: string;
-  name: string;
-  quantity: number;
-  updatedAt: string;
-}
+import { Asset } from "@/lib/types";
 
 const texts = {
   bn: {
@@ -65,11 +60,10 @@ const texts = {
 };
 
 export default function AgroCountPage() {
-  const { language } = useApp();
+  const { language, assets, setAssets, saveAllData } = useApp();
   const lang = language === "bn" ? "bn" : "en";
   const txt = texts[lang];
 
-  const [assets, setAssets] = useState<Asset[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
 
   // Editor states
@@ -78,24 +72,9 @@ export default function AgroCountPage() {
   const [assetName, setAssetName] = useState("");
   const [assetQty, setAssetQty] = useState("");
 
-  // Load from localStorage on mount safely
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("khan_agro_assets");
-      if (saved) {
-        try {
-          setAssets(JSON.parse(saved));
-        } catch (e) {
-          console.error("Failed to parse assets");
-        }
-      }
-    }
-  }, []);
-
-  // Save changes helper
-  const saveAssetsToLocal = (newAssets: Asset[]) => {
+  const saveAssetsToDB = async (newAssets: Asset[]) => {
     setAssets(newAssets);
-    localStorage.setItem("khan_agro_assets", JSON.stringify(newAssets));
+    await saveAllData(undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, newAssets);
   };
 
   const handleSaveAsset = (e: React.FormEvent) => {
@@ -123,7 +102,7 @@ export default function AgroCountPage() {
             }
           : a
       );
-      saveAssetsToLocal(updated);
+      saveAssetsToDB(updated);
       setIsEditing(false);
       setEditingId(null);
     } else {
@@ -134,7 +113,7 @@ export default function AgroCountPage() {
         quantity: qtyVal,
         updatedAt: formattedDate
       };
-      saveAssetsToLocal([newAsset, ...assets]);
+      saveAssetsToDB([newAsset, ...assets]);
     }
 
     // Reset
@@ -160,7 +139,7 @@ export default function AgroCountPage() {
   const handleDeleteAsset = (id: string) => {
     if (confirm(txt.deleteConfirm)) {
       const filtered = assets.filter((a) => a.id !== id);
-      saveAssetsToLocal(filtered);
+      saveAssetsToDB(filtered);
       if (editingId === id) {
         handleCancelEdit();
       }
@@ -186,7 +165,7 @@ export default function AgroCountPage() {
       }
       return a;
     });
-    saveAssetsToLocal(updated);
+    saveAssetsToDB(updated);
   };
 
   const filteredAssets = assets.filter((a) =>
@@ -199,22 +178,22 @@ export default function AgroCountPage() {
     <div className="space-y-6 animate-fade-in max-w-6xl mx-auto select-none pb-12">
       
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800/80 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/80 pb-4">
         <div className="space-y-1">
-          <h2 className="text-xl font-bold flex items-center gap-2 text-slate-100">
+          <h2 className="text-xl font-bold flex items-center gap-2 text-text-primary">
             <Layers className="w-6 h-6 text-emerald-400" /> {txt.title}
           </h2>
-          <p className="text-xs text-slate-450 font-medium">{txt.subtitle}</p>
+          <p className="text-xs text-text-muted font-medium">{txt.subtitle}</p>
         </div>
       </div>
 
       {/* Analytics Summary Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Categories Card */}
-        <Card className="bg-[#0e1626]/40 backdrop-blur border-slate-850 shadow p-4 flex items-center justify-between">
+        <Card className="bg-surface/40 backdrop-blur border-border shadow p-4 flex items-center justify-between">
           <div className="space-y-1">
-            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{txt.totalAssets}</span>
-            <h3 className="text-2xl font-black font-mono text-slate-100">{assets.length}</h3>
+            <span className="text-[10px] text-text-muted font-bold uppercase tracking-wider">{txt.totalAssets}</span>
+            <h3 className="text-2xl font-black font-mono text-text-primary">{assets.length}</h3>
           </div>
           <div className="p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20 text-emerald-400">
             <Layers className="w-5 h-5" />
@@ -222,9 +201,9 @@ export default function AgroCountPage() {
         </Card>
 
         {/* Total Quantity Card */}
-        <Card className="bg-[#0e1626]/40 backdrop-blur border-slate-850 shadow p-4 flex items-center justify-between">
+        <Card className="bg-surface/40 backdrop-blur border-border shadow p-4 flex items-center justify-between">
           <div className="space-y-1">
-            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{txt.totalQty}</span>
+            <span className="text-[10px] text-text-muted font-bold uppercase tracking-wider">{txt.totalQty}</span>
             <h3 className="text-2xl font-black font-mono text-emerald-450">{totalQuantitySum.toLocaleString()}</h3>
           </div>
           <div className="p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20 text-emerald-400">
@@ -237,9 +216,9 @@ export default function AgroCountPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
         {/* Editor Form Card (col-span-5) */}
-        <Card className="lg:col-span-5 bg-[#0e1626]/60 backdrop-blur border-slate-800/80 shadow-2xl rounded-3xl p-5">
-          <CardHeader className="p-0 pb-3 border-b border-slate-800/60 mb-5">
-            <CardTitle className="text-sm font-black flex items-center gap-2 text-slate-200">
+        <Card className="lg:col-span-5 bg-surface/60 backdrop-blur border-border/80 shadow-2xl rounded-3xl p-5">
+          <CardHeader className="p-0 pb-3 border-b border-border/60 mb-5">
+            <CardTitle className="text-sm font-black flex items-center gap-2 text-text-primary">
               <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
               {isEditing ? txt.editAsset : txt.addAsset}
             </CardTitle>
@@ -249,7 +228,7 @@ export default function AgroCountPage() {
               
               {/* Asset Name Input */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-450 uppercase tracking-wider">{txt.assetNameLabel}</label>
+                <label className="text-xs font-bold text-text-muted uppercase tracking-wider">{txt.assetNameLabel}</label>
                 <Input
                   type="text"
                   placeholder={txt.assetNamePlaceholder}
@@ -263,7 +242,7 @@ export default function AgroCountPage() {
 
               {/* Asset Quantity Input */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-450 uppercase tracking-wider">{txt.assetQtyLabel}</label>
+                <label className="text-xs font-bold text-text-muted uppercase tracking-wider">{txt.assetQtyLabel}</label>
                 <Input
                   type="number"
                   min="0"
@@ -282,7 +261,7 @@ export default function AgroCountPage() {
                     type="button"
                     onClick={handleCancelEdit}
                     variant="outline"
-                    className="flex-1 h-11 text-xs font-bold border-slate-800 hover:bg-slate-800"
+                    className="flex-1 h-11 text-xs font-bold border-border hover:bg-surface-hover"
                   >
                     <X className="w-4 h-4 mr-1 text-red-400" /> {txt.cancelEdit}
                   </Button>
@@ -305,13 +284,13 @@ export default function AgroCountPage() {
           
           {/* Live Search bar */}
           <div className="relative">
-            <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-text-muted absolute left-3.5 top-1/2 -translate-y-1/2" />
             <Input
               type="text"
               placeholder={txt.searchPlaceholder}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-11 text-xs bg-[#0e1626]/40 border-slate-800/80 rounded-2xl"
+              className="pl-10 h-11 text-xs bg-surface/40 border-border/80 rounded-2xl"
             />
           </div>
 
@@ -320,36 +299,36 @@ export default function AgroCountPage() {
             {filteredAssets.map((asset) => (
               <Card 
                 key={asset.id}
-                className="bg-[#0e1626]/45 hover:bg-[#0e1626]/75 border-slate-850 hover:border-slate-800/80 transition-all duration-300 rounded-2xl p-4 shadow-sm"
+                className="bg-surface/45 hover:bg-surface/75 border-border hover:border-border/80 transition-all duration-300 rounded-2xl p-4 shadow-sm"
               >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   
                   {/* Info block */}
                   <div className="space-y-1.5 flex-1">
-                    <h3 className="text-sm font-black text-slate-100 tracking-tight break-all">{asset.name}</h3>
-                    <span className="text-[8.5px] text-slate-500 font-bold flex items-center gap-1 uppercase tracking-wider">
-                      <Calendar className="w-3 h-3 text-slate-550" /> {txt.updated} {asset.updatedAt}
+                    <h3 className="text-sm font-black text-text-primary tracking-tight break-all">{asset.name}</h3>
+                    <span className="text-[8.5px] text-text-muted font-bold flex items-center gap-1 uppercase tracking-wider">
+                      <Calendar className="w-3 h-3 text-text-muted" /> {txt.updated} {asset.updatedAt}
                     </span>
                   </div>
 
                   {/* Quantity adjustment & Actions row */}
-                  <div className="flex items-center justify-between sm:justify-end gap-6 border-t border-slate-850 sm:border-0 pt-3 sm:pt-0">
+                  <div className="flex items-center justify-between sm:justify-end gap-6 border-t border-border sm:border-0 pt-3 sm:pt-0">
                     
                     {/* Taps adjustment controls */}
                     <div className="flex items-center gap-2.5">
                       <button
                         onClick={() => handleAdjustQuantity(asset.id, -1)}
-                        className="w-7 h-7 rounded-full border border-slate-800 bg-[#070b13] text-rose-500 hover:bg-slate-800 hover:scale-105 active:scale-95 transition-all flex items-center justify-center font-bold text-xs"
+                        className="w-7 h-7 rounded-full border border-border bg-bg text-rose-500 hover:bg-surface-hover hover:scale-105 active:scale-95 transition-all flex items-center justify-center font-bold text-xs"
                         title="Reduce"
                       >
                         -
                       </button>
-                      <span className="text-lg font-mono font-black text-slate-200 min-w-[32px] text-center">
+                      <span className="text-lg font-mono font-black text-text-primary min-w-[32px] text-center">
                         {asset.quantity}
                       </span>
                       <button
                         onClick={() => handleAdjustQuantity(asset.id, 1)}
-                        className="w-7 h-7 rounded-full border border-slate-800 bg-[#070b13] text-emerald-450 hover:bg-slate-800 hover:scale-105 active:scale-95 transition-all flex items-center justify-center font-bold text-xs"
+                        className="w-7 h-7 rounded-full border border-border bg-bg text-emerald-400 hover:bg-surface-hover hover:scale-105 active:scale-95 transition-all flex items-center justify-center font-bold text-xs"
                         title="Increase"
                       >
                         +
@@ -360,14 +339,14 @@ export default function AgroCountPage() {
                     <div className="flex items-center gap-1.5">
                       <button
                         onClick={() => handleStartEdit(asset)}
-                        className="p-1.5 rounded-lg border border-slate-800/80 bg-slate-900/60 hover:bg-slate-800 text-slate-450 hover:text-emerald-400 transition-all"
+                        className="p-1.5 rounded-lg border border-border/80 bg-surface-hover hover:bg-surface-hover/80 text-text-muted hover:text-emerald-400 transition-all"
                         title="Edit asset details"
                       >
                         <Edit className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => handleDeleteAsset(asset.id)}
-                        className="p-1.5 rounded-lg border border-slate-800/80 bg-slate-900/60 hover:bg-slate-800 text-slate-450 hover:text-rose-400 transition-all"
+                        className="p-1.5 rounded-lg border border-border/80 bg-surface-hover hover:bg-surface-hover/80 text-text-muted hover:text-rose-400 transition-all"
                         title="Delete asset"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -381,9 +360,9 @@ export default function AgroCountPage() {
             ))}
 
             {filteredAssets.length === 0 && (
-              <div className="text-center py-24 bg-[#0e1626]/20 border border-dashed border-slate-800/60 rounded-3xl">
-                <Layers className="w-10 h-10 text-slate-600 mx-auto mb-2 animate-pulse" />
-                <p className="text-slate-500 text-xs font-semibold">{txt.noAssets}</p>
+              <div className="text-center py-24 bg-surface/20 border border-dashed border-border/60 rounded-3xl">
+                <Layers className="w-10 h-10 text-text-muted/60 mx-auto mb-2 animate-pulse" />
+                <p className="text-text-muted text-xs font-semibold">{txt.noAssets}</p>
               </div>
             )}
           </div>

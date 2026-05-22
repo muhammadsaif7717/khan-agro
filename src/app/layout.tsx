@@ -3,6 +3,8 @@ import { Exo_2 } from "next/font/google";
 import "./globals.css";
 import { AppProvider } from "@/context/AppContext";
 import QueryProvider from "@/providers/query-provider";
+import { ThemeProvider } from "@/context/ThemeContext";
+import ThemeToggle from "@/components/ThemeToggle";
 
 const exo2 = Exo_2({
   subsets: ["latin"],
@@ -38,13 +40,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="bn" className={`${exo2.variable} font-sans h-full antialiased`}>
-      <body className="min-h-full flex flex-col bg-[#070b13] text-white">
-        <QueryProvider>
-          <AppProvider>
-            {children}
-          </AppProvider>
-        </QueryProvider>
+    <html lang="bn" className={`${exo2.variable} font-sans h-full antialiased`} suppressHydrationWarning>
+      <body className="min-h-full flex flex-col bg-bg text-text-primary relative">
+        <ThemeProvider>
+          <div className="absolute top-4 right-4 z-10">
+            <ThemeToggle />
+          </div>
+          <QueryProvider>
+            <AppProvider>
+              {children}
+            </AppProvider>
+          </QueryProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

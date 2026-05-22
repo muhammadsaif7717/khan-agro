@@ -36,6 +36,13 @@
 
 @theme {
   --font-sans: var(--font-exo2), sans-serif;
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-border: var(--border);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
 }
 
 body {
@@ -167,167 +174,7 @@ body {
 }
 
 /* ── Light Mode UI Overrides ────────────────────────────────────────────────── */
-.light .bg-\[\#070b13\] {
-  background-color: var(--bg) !important;
-}
-
-.light .bg-\[\#0e1626\] {
-  background-color: var(--surface) !important;
-}
-
-.light .bg-\[\#0e1626\]\/95 {
-  background-color: rgba(255, 255, 255, 0.95) !important;
-}
-
-.light .bg-\[\#0e1626\]\/90 {
-  background-color: rgba(255, 255, 255, 0.9) !important;
-  backdrop-filter: blur(20px);
-}
-
-.light .bg-\[\#0e1626\]\/80 {
-  background-color: rgba(255, 255, 255, 0.8) !important;
-}
-
-.light .bg-\[\#0e1626\]\/75 {
-  background-color: rgba(255, 255, 255, 0.75) !important;
-}
-
-.light .bg-\[\#0e1626\]\/70 {
-  background-color: rgba(255, 255, 255, 0.7) !important;
-}
-
-.light .bg-\[\#0e1626\]\/60 {
-  background-color: rgba(255, 255, 255, 0.6) !important;
-}
-
-.light .bg-\[\#0e1626\]\/50 {
-  background-color: rgba(255, 255, 255, 0.5) !important;
-}
-
-.light .bg-\[\#172237\] {
-  background-color: var(--surface-hover) !important;
-}
-
-.light .bg-slate-800 {
-  background-color: var(--border) !important;
-}
-
-.light .border-slate-800\/80 {
-  border-color: var(--border) !important;
-}
-
-.light .border-slate-800\/50 {
-  border-color: var(--border) !important;
-}
-
-.light .border-slate-800 {
-  border-color: var(--border) !important;
-}
-
-.light .border-slate-700\/80 {
-  border-color: var(--border) !important;
-}
-
-.light .text-white {
-  color: var(--text-primary) !important;
-}
-
-.light .text-slate-100 {
-  color: var(--text-primary) !important;
-}
-
-.light .text-slate-200 {
-  color: var(--text-primary) !important;
-}
-
-.light .text-slate-300 {
-  color: var(--text-secondary) !important;
-}
-
-.light .text-slate-400 {
-  color: var(--text-secondary) !important;
-}
-
-.light .text-slate-500 {
-  color: var(--text-muted) !important;
-}
-
-.light .text-slate-600 {
-  color: var(--text-muted) !important;
-}
-
-.light .bg-red-950\/40 {
-  background-color: #fee2e2 !important;
-}
-
-.light .border-red-900\/50, .light .border-red-900\/60 {
-  border-color: #fca5a5 !important;
-}
-
-.light .text-red-400 {
-  color: #dc2626 !important;
-}
-
-.light .bg-emerald-950\/60 {
-  background-color: #d1fae5 !important;
-}
-
-.light .border-emerald-900\/60 {
-  border-color: #6ee7b7 !important;
-}
-
-.light .text-emerald-400 {
-  color: #059669 !important;
-}
-
-.light .text-orange-400 {
-  color: #ea580c !important;
-}
-
-.light .text-cyan-400 {
-  color: #0891b2 !important;
-}
-
-.light .text-purple-400 {
-  color: #9333ea !important;
-}
-
-.light .bg-slate-900\/60 {
-  background-color: rgba(241, 245, 249, 0.9) !important;
-}
-
-.light .bg-slate-900\/60:hover {
-  background-color: rgba(226, 232, 240, 0.9) !important;
-}
-
-.light .bg-slate-800\/40 {
-  background-color: rgba(241, 245, 249, 0.7) !important;
-}
-
-.light .hover\:bg-slate-800\/80:hover {
-  background-color: rgba(226, 232, 240, 0.9) !important;
-}
-
-.light .bg-slate-850 {
-  background-color: var(--border) !important;
-}
-
-.light .border-slate-850 {
-  border-color: var(--border) !important;
-}
-
-.light .hover\:bg-slate-800\/50:hover {
-  background-color: rgba(226, 232, 240, 0.5) !important;
-}
-
-.light .hover\:bg-slate-800\/30:hover {
-  background-color: rgba(226, 232, 240, 0.3) !important;
-}
-
-.light line {
-  stroke: var(--border) !important;
-}
-
-.light text {
-  fill: var(--text-secondary) !important;
-}
+/* 
+  Legacy specific tailwind class overrides have been removed. 
+  Components now use semantic classes like bg-surface, text-text-primary, border-border. 
+*/

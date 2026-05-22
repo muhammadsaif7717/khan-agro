@@ -19,13 +19,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-interface Note {
-  id: string;
-  title: string;
-  description: string;
-  category: "general" | "milk" | "feed" | "finance" | "todo";
-  createdAt: string;
-}
+import { Note } from "@/lib/types";
 
 const texts = {
   bn: {
@@ -87,12 +81,10 @@ const categoryStyles = {
 };
 
 export default function NotepadPage() {
-  const { language } = useApp();
+  const { language, notes, setNotes, saveAllData } = useApp();
   const lang = language === "bn" ? "bn" : "en";
   const txt = texts[lang];
 
-  // Notes persistence
-  const [notes, setNotes] = useState<Note[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   
   // Editor States
@@ -104,24 +96,9 @@ export default function NotepadPage() {
 
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  // Load from localStorage on mount safely
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("khan_agro_notes");
-      if (saved) {
-        try {
-          setNotes(JSON.parse(saved));
-        } catch (e) {
-          console.error("Failed to parse notes");
-        }
-      }
-    }
-  }, []);
-
-  // Save to localStorage on changes
-  const saveNotesToLocal = (newNotes: Note[]) => {
+  const saveNotesToDB = async (newNotes: Note[]) => {
     setNotes(newNotes);
-    localStorage.setItem("khan_agro_notes", JSON.stringify(newNotes));
+    await saveAllData(undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, newNotes);
   };
 
   const handleSaveNote = (e: React.FormEvent) => {
@@ -140,7 +117,7 @@ export default function NotepadPage() {
             } 
           : n
       );
-      saveNotesToLocal(updated);
+      saveNotesToDB(updated);
       setIsEditing(false);
       setEditingId(null);
     } else {
@@ -156,7 +133,7 @@ export default function NotepadPage() {
           day: "numeric"
         })
       };
-      saveNotesToLocal([newNote, ...notes]);
+      saveNotesToDB([newNote, ...notes]);
     }
 
     // Reset Form
@@ -186,7 +163,7 @@ export default function NotepadPage() {
   const handleDeleteNote = (id: string) => {
     if (confirm(txt.deleteConfirm)) {
       const filtered = notes.filter((n) => n.id !== id);
-      saveNotesToLocal(filtered);
+      saveNotesToDB(filtered);
       if (editingId === id) {
         handleCancelEdit();
       }
@@ -208,14 +185,14 @@ export default function NotepadPage() {
   return (
     <div className="space-y-6 animate-fade-in max-w-6xl mx-auto select-none pb-12">
       {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800/80 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/80 pb-4">
         <div className="space-y-1">
-          <h2 className="text-xl font-bold flex items-center gap-2 text-slate-100">
+          <h2 className="text-xl font-bold flex items-center gap-2 text-text-primary">
             <StickyNote className="w-6 h-6 text-emerald-400" /> {txt.title}
           </h2>
-          <p className="text-xs text-slate-450 font-medium">{txt.subtitle}</p>
+          <p className="text-xs text-text-muted font-medium">{txt.subtitle}</p>
         </div>
-        <span className="text-[10px] text-slate-450 font-black uppercase tracking-widest bg-emerald-500/10 px-3 py-1 border border-emerald-500/20 rounded-full w-fit">
+        <span className="text-[10px] text-text-muted font-black uppercase tracking-widest bg-emerald-500/10 px-3 py-1 border border-emerald-500/20 rounded-full w-fit">
           {notes.length} {language === "bn" ? "টি নোট সংরক্ষিত" : "Notes Saved"}
         </span>
       </div>
@@ -224,9 +201,9 @@ export default function NotepadPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
         {/* Note Editor Card (col-span-5) */}
-        <Card className="lg:col-span-5 bg-[#0e1626]/60 backdrop-blur border-slate-800/80 shadow-2xl rounded-3xl p-5">
-          <CardHeader className="p-0 pb-3 border-b border-slate-800/60 mb-5">
-            <CardTitle className="text-sm font-black flex items-center gap-2 text-slate-200">
+        <Card className="lg:col-span-5 bg-surface/60 backdrop-blur border-border/80 shadow-2xl rounded-3xl p-5">
+          <CardHeader className="p-0 pb-3 border-b border-border/60 mb-5">
+            <CardTitle className="text-sm font-black flex items-center gap-2 text-text-primary">
               <FileText className="w-4 h-4 text-emerald-400" />
               {isEditing ? txt.editNote : txt.addNote}
             </CardTitle>
@@ -235,7 +212,7 @@ export default function NotepadPage() {
             <form onSubmit={handleSaveNote} className="space-y-4">
               {/* Note Title Input */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-450 uppercase tracking-wider">{txt.noteTitleLabel}</label>
+                <label className="text-xs font-bold text-text-muted uppercase tracking-wider">{txt.noteTitleLabel}</label>
                 <Input
                   type="text"
                   placeholder={txt.noteTitlePlaceholder}
@@ -249,11 +226,11 @@ export default function NotepadPage() {
 
               {/* Note Category Select */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-450 uppercase tracking-wider">{txt.categoryLabel}</label>
+                <label className="text-xs font-bold text-text-muted uppercase tracking-wider">{txt.categoryLabel}</label>
                 <select
                   value={noteCategory}
                   onChange={(e: any) => setNoteCategory(e.target.value)}
-                  className="flex h-11 w-full rounded-xl border border-slate-800 bg-[#070b13] px-3.5 py-2 text-xs text-slate-200 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 font-bold transition-all"
+                  className="flex h-11 w-full rounded-xl border border-border bg-bg px-3.5 py-2 text-xs text-text-primary outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 font-bold transition-all"
                 >
                   <option value="general">{txt.categories.general}</option>
                   <option value="milk">{txt.categories.milk}</option>
@@ -265,13 +242,13 @@ export default function NotepadPage() {
 
               {/* Note Description Input */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-450 uppercase tracking-wider">{txt.noteDescLabel}</label>
+                <label className="text-xs font-bold text-text-muted uppercase tracking-wider">{txt.noteDescLabel}</label>
                 <textarea
                   placeholder={txt.noteDescPlaceholder}
                   value={noteDesc}
                   onChange={(e) => setNoteDesc(e.target.value)}
                   rows={6}
-                  className="flex w-full rounded-xl border border-slate-800 bg-[#070b13] px-3.5 py-2 text-xs text-slate-200 placeholder:text-slate-600 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all font-semibold resize-none"
+                  className="flex w-full rounded-xl border border-border bg-bg px-3.5 py-2 text-xs text-text-primary placeholder:text-text-muted outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all font-semibold resize-none"
                   required
                 />
               </div>
@@ -283,7 +260,7 @@ export default function NotepadPage() {
                     type="button"
                     onClick={handleCancelEdit}
                     variant="outline"
-                    className="flex-1 h-11 text-xs font-bold border-slate-800 hover:bg-slate-800"
+                    className="flex-1 h-11 text-xs font-bold border-border hover:bg-surface-hover"
                   >
                     <X className="w-4 h-4 mr-1 text-red-400" /> {txt.cancelEdit}
                   </Button>
@@ -304,13 +281,13 @@ export default function NotepadPage() {
         <div className="lg:col-span-7 space-y-4">
           {/* Real-time search bar */}
           <div className="relative">
-            <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-text-muted absolute left-3.5 top-1/2 -translate-y-1/2" />
             <Input
               type="text"
               placeholder={txt.searchPlaceholder}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-11 text-xs bg-[#0e1626]/40 border-slate-800/80 rounded-2xl"
+              className="pl-10 h-11 text-xs bg-surface border-border/80 rounded-2xl"
             />
           </div>
 
@@ -319,19 +296,19 @@ export default function NotepadPage() {
             {filteredNotes.map((note) => (
               <Card 
                 key={note.id} 
-                className="bg-[#0e1626]/45 hover:bg-[#0e1626]/75 border-slate-850 hover:border-slate-800/80 transition-all duration-300 rounded-2xl p-4 shadow-sm"
+                className="bg-surface/45 hover:bg-surface/75 border-border hover:border-border/80 transition-all duration-300 rounded-2xl p-4 shadow-sm"
               >
                 <div className="flex items-start justify-between gap-3 mb-2">
                   <div className="space-y-1">
-                    <h3 className="text-sm font-black text-slate-100 tracking-tight break-all">{note.title}</h3>
+                    <h3 className="text-sm font-black text-text-primary tracking-tight break-all">{note.title}</h3>
                     
                     {/* Meta tag / category indicators */}
                     <div className="flex flex-wrap items-center gap-2 pt-0.5">
                       <span className={`text-[8.5px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md border ${categoryStyles[note.category]}`}>
                         {txt.categories[note.category]}
                       </span>
-                      <span className="text-[8.5px] text-slate-500 font-bold flex items-center gap-1">
-                        <Calendar className="w-3 h-3 text-slate-550" /> {note.createdAt}
+                      <span className="text-[8.5px] text-text-muted font-bold flex items-center gap-1">
+                        <Calendar className="w-3 h-3 text-text-muted" /> {note.createdAt}
                       </span>
                     </div>
                   </div>
@@ -340,21 +317,21 @@ export default function NotepadPage() {
                   <div className="flex items-center gap-1.5 shrink-0">
                     <button
                       onClick={() => handleCopyToClipboard(note)}
-                      className="p-1.5 rounded-lg border border-slate-800/80 bg-slate-900/60 hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-all"
+                      className="p-1.5 rounded-lg border border-border/80 bg-surface-hover hover:bg-surface-hover/80 text-text-muted hover:text-text-primary transition-all"
                       title="Copy content"
                     >
                       {copiedId === note.id ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                     </button>
                     <button
                       onClick={() => handleStartEdit(note)}
-                      className="p-1.5 rounded-lg border border-slate-800/80 bg-slate-900/60 hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-all"
+                      className="p-1.5 rounded-lg border border-border/80 bg-surface-hover hover:bg-surface-hover/80 text-text-muted hover:text-text-primary transition-all"
                       title="Edit note"
                     >
                       <Edit className="w-3.5 h-3.5 text-emerald-500" />
                     </button>
                     <button
                       onClick={() => handleDeleteNote(note.id)}
-                      className="p-1.5 rounded-lg border border-slate-800/80 bg-slate-900/60 hover:bg-slate-800 text-slate-400 hover:text-red-400 transition-all"
+                      className="p-1.5 rounded-lg border border-border/80 bg-surface-hover hover:bg-surface-hover/80 text-text-muted hover:text-red-400 transition-all"
                       title="Delete note"
                     >
                       <Trash2 className="w-3.5 h-3.5 text-rose-500" />
@@ -363,16 +340,16 @@ export default function NotepadPage() {
                 </div>
 
                 {/* Note Description */}
-                <p className="text-xs text-slate-350 font-medium leading-relaxed break-words whitespace-pre-wrap pt-1.5 border-t border-slate-850">
+                <p className="text-xs text-text-secondary font-medium leading-relaxed break-words whitespace-pre-wrap pt-1.5 border-t border-border">
                   {note.description}
                 </p>
               </Card>
             ))}
 
             {filteredNotes.length === 0 && (
-              <div className="text-center py-24 bg-[#0e1626]/20 border border-dashed border-slate-800/60 rounded-3xl">
-                <StickyNote className="w-10 h-10 text-slate-600 mx-auto mb-2 animate-pulse" />
-                <p className="text-slate-500 text-xs font-semibold">{txt.noNotes}</p>
+              <div className="text-center py-24 bg-surface/20 border border-dashed border-border/60 rounded-3xl">
+                <StickyNote className="w-10 h-10 text-text-muted/60 mx-auto mb-2 animate-pulse" />
+                <p className="text-text-muted text-xs font-semibold">{txt.noNotes}</p>
               </div>
             )}
           </div>

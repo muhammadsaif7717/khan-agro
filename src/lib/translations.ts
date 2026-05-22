@@ -156,6 +156,10 @@ export const translations = {
     savedOn: "সংরক্ষণ কাল: {date}",
     activeTotal: "চলতি মোট",
     grandTotal: "সর্বমোট",
+    navResetAndSave: "রিসেট ও সেভ",
+    historyTitle: "হিস্ট্রি রেকর্ডস",
+    historyDesc: "পূর্বে সেভ করা সেশন",
+    resetConfirm: "আপনি কি নিশ্চিতভাবে সব স্ট্যাটস 0 করতে চান?",
 
     // Calculator Specific
     calcNormal: "সাধারণ হিসাব",
@@ -323,9 +327,13 @@ export const translations = {
     resetOption: "Reset / Save Option",
     saveReset: "Save & Reset",
     savedTotalsTitle: "Saved Totals (History)",
-    savedOn: "Saved on: {date}",
+    savedOn: "Saved On: {date}",
     activeTotal: "Active Total",
     grandTotal: "Grand Total",
+    navResetAndSave: "Reset & Save",
+    historyTitle: "History Records",
+    historyDesc: "Past saved sessions",
+    resetConfirm: "Are you sure you want to reset all stats to 0?",
 
     // Calculator Specific
     calcNormal: "Standard Calc",

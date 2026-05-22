@@ -3,64 +3,16 @@
 import { useApp } from "@/context/AppContext";
 import { 
   BarChart3, 
-  ClipboardList, 
-  PieChart, 
-  Scale, 
-  Database, 
-  Calendar,
-  TrendingUp,
-  TrendingDown,
-  Gift,
-  Landmark,
-  Briefcase,
-  Coins,
-  Undo2
+  History,
+  Trash2
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RecordItem, FarmData } from "@/lib/types";
 
-const BADGE_MAP = {
-  navIncome: {
-    icon: TrendingUp,
-    badgeClass: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
-    textClass: "text-emerald-400",
-  },
-  navExpense: {
-    icon: TrendingDown,
-    badgeClass: "text-red-400 bg-red-500/10 border-red-500/20",
-    textClass: "text-red-400",
-  },
-  navDonation: {
-    icon: Gift,
-    badgeClass: "text-orange-400 bg-orange-500/10 border-orange-500/20",
-    textClass: "text-orange-400",
-  },
-  navWithdraw: {
-    icon: Landmark,
-    badgeClass: "text-cyan-400 bg-cyan-500/10 border-cyan-500/20",
-    textClass: "text-cyan-400",
-  },
-  navInvestment: {
-    icon: Briefcase,
-    badgeClass: "text-purple-400 bg-purple-500/10 border-purple-500/20",
-    textClass: "text-purple-400",
-  },
-  navReinvestment: {
-    icon: Coins,
-    badgeClass: "text-amber-400 bg-amber-500/10 border-amber-500/20",
-    textClass: "text-amber-400",
-  },
-  navReturnedCash: {
-    icon: Undo2,
-    badgeClass: "text-rose-400 bg-rose-500/10 border-rose-500/20",
-    textClass: "text-rose-400",
-  },
-};
-
 export default function DashboardContent() {
   const {
     income, expense, donation, withdraw, investment, reinvestment, returnedCash, savedTotals,
-    isDbConnected, lastSaved, t, language, addItem, setReturnedCashOffset
+    t, language, setReturnedCashOffset, deleteHistorySession
   } = useApp();
 
   const handleResetReturnedCash = async (amount: number) => {
@@ -69,12 +21,9 @@ export default function DashboardContent() {
     await setReturnedCashOffset(amount);
   };
 
-  // Helper to calculate grand total (current active + saved history total)
+  // Helper to calculate active total (ignoring saved history)
   const getGrandTotalForType = (type: keyof FarmData, list: RecordItem[]) => {
-    const activeTotal = list.reduce((s, i) => s + i.amount, 0);
-    const savedList = savedTotals[type] || [];
-    const savedTotal = savedList.reduce((s, i) => s + i.amount, 0);
-    return activeTotal + savedTotal;
+    return list.reduce((s, i) => s + i.amount, 0);
   };
 
   // ── Totals ──────────────────────────────────────────────────────────────────
@@ -107,23 +56,33 @@ export default function DashboardContent() {
     { labelKey: "calcCashBalance" as const,     value: calcCashBalanceVal,  color: "border-l-indigo-500",  textColor: calcCashBalanceVal >= 0 ? "text-indigo-400" : "text-red-400", glowClass: "glow-cash-balance" },
   ];
 
-  // ── Recent Transactions ──────────────────────────────────────────────────────
-  const recentTransactions = [
-    ...income.map(i => ({ typeKey: "navIncome" as const,       text: i.text, amount: i.amount, date: i.date, colorClass: "text-emerald-400 bg-emerald-950/40 border border-emerald-900/30" })),
-    ...expense.map(i => ({ typeKey: "navExpense" as const,     text: i.text, amount: i.amount, date: i.date, colorClass: "text-red-400 bg-red-950/40 border border-red-900/30" })),
-    ...donation.map(i => ({ typeKey: "navDonation" as const,   text: i.text, amount: i.amount, date: i.date, colorClass: "text-orange-400 bg-orange-950/40 border border-orange-900/30" })),
-    ...withdraw.map(i => ({ typeKey: "navWithdraw" as const,   text: i.text, amount: i.amount, date: i.date, colorClass: "text-cyan-400 bg-cyan-950/40 border border-cyan-900/30" })),
-    ...returnedCash.map(i => ({ typeKey: "navReturnedCash" as const, text: i.text, amount: i.amount, date: i.date, colorClass: "text-rose-400 bg-rose-950/40 border border-rose-900/30" })),
-    ...investment.map(i => ({ typeKey: "navInvestment" as const, text: i.text, amount: i.amount, date: i.date, colorClass: "text-purple-400 bg-purple-950/40 border border-purple-900/30" })),
-    ...reinvestment.map(i => ({ typeKey: "navReinvestment" as const, text: i.text, amount: i.amount, date: i.date, colorClass: "text-amber-400 bg-amber-950/40 border border-amber-900/30" })),
-  ]
-    .sort((a, b) => b.date.localeCompare(a.date))
-    .slice(0, 8);
+  // ── Compute History Sessions ──────────────────────────────────────────────────
+  const sessionsMap: Record<string, { date: string; note: string; [key: string]: string | number }> = {};
+  const categories = ["income", "expense", "donation", "withdraw", "investment", "reinvestment", "returnedCash"] as const;
+
+  categories.forEach((cat) => {
+    const items = savedTotals[cat] || [];
+    items.forEach((item) => {
+      const key = `${item.date}-${item.note}`;
+      if (!sessionsMap[key]) {
+        sessionsMap[key] = { date: item.date, note: item.note || "" };
+        categories.forEach(c => sessionsMap[key][c] = 0);
+      }
+      (sessionsMap[key][cat] as number) += item.amount;
+    });
+  });
+
+  const historySessions = Object.values(sessionsMap).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  const handleDeleteSession = async (date: string, note: string) => {
+    if (!confirm(language === "bn" ? "এই ইতিহাস মুছে ফেলতে চান?" : "Delete this history record?")) return;
+    await deleteHistorySession(date, note);
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-        <h2 className="text-xl font-bold flex items-center gap-2 text-slate-100">
+      <div className="flex items-center justify-between border-b border-border pb-2">
+        <h2 className="text-xl font-bold flex items-center gap-2 text-text-primary">
           <BarChart3 className="w-6 h-6 text-emerald-400 animate-pulse" /> {t("dashboardTitle")}
         </h2>
       </div>
@@ -136,7 +95,7 @@ export default function DashboardContent() {
             className={`border-l-4 ${card.color} p-4 flex flex-col justify-between hover:scale-102 hover:shadow-lg transition-all duration-300 ${card.glowClass} relative group`}
           >
             <div className="flex justify-between items-start">
-              <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-tight">
+              <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider leading-tight">
                 {t(card.labelKey)}
               </span>
               {card.labelKey === "calcReturnCash" && (
@@ -156,117 +115,68 @@ export default function DashboardContent() {
         ))}
       </div>
 
-      {/* ── Recent Transactions & Stats Grid ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Recent Transactions */}
-        <Card className="lg:col-span-8 flex flex-col">
-          <CardHeader className="pb-3 border-0">
-            <CardTitle className="text-sm font-bold flex items-center gap-1.5 text-slate-200">
-              <ClipboardList className="w-4 h-4 text-slate-400" /> {t("recentTransactions")}
+      {/* ── History Section ────────────────────────────────────────────────────── */}
+      {historySessions.length > 0 && (
+        <Card className="mt-8 border-t-4 border-t-indigo-500">
+          <CardHeader>
+            <CardTitle className="text-lg font-bold flex items-center gap-2 text-text-primary">
+              <History className="w-5 h-5 text-indigo-400" /> {t("historyTitle")}
             </CardTitle>
-            <CardDescription>{t("recentTransactionsDesc")}</CardDescription>
+            <CardDescription>{t("historyDesc")}</CardDescription>
           </CardHeader>
-          <CardContent className="flex-1 flex flex-col justify-between">
-            <div className="space-y-3">
-              {recentTransactions.map((item, idx) => {
-                const config = BADGE_MAP[item.typeKey];
-                if (!config) return null;
-                const Icon = config.icon;
-                return (
-                  <div key={idx} className="flex justify-between items-center py-2.5 border-b border-slate-800/40 last:border-0 hover:translate-x-1 transition-transform duration-200 group">
-                    <div className="flex items-center gap-2.5">
-                      <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full border text-[9px] font-black uppercase tracking-wider ${config.badgeClass}`}>
-                        <Icon className="w-3.5 h-3.5 shrink-0" />
-                        <span>{t(item.typeKey)}</span>
-                      </div>
-                      <div>
-                        <p className="font-bold text-xs text-slate-200 group-hover:text-white transition-colors">
-                          {item.text}
-                        </p>
-                        <p className="text-[9px] text-slate-400 mt-0.5 flex items-center gap-1 font-semibold">
-                          <Calendar className="w-3 h-3 text-slate-500" /> {item.date}
-                        </p>
-                      </div>
-                    </div>
-                    <span className={`font-black text-xs ${config.textClass} ml-3 shrink-0`}>
-                      {t("takaSymbol")} {item.amount.toLocaleString()}
-                    </span>
-                  </div>
-                );
-              })}
-              {recentTransactions.length === 0 && (
-                <p className="text-center text-slate-500 text-xs py-12">{t("noTransactions")}</p>
-              )}
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm text-text-secondary">
+                <thead className="bg-surface-hover/50 text-xs uppercase font-bold text-text-muted">
+                  <tr>
+                    <th className="px-4 py-3 rounded-tl-lg">{t("dateLabel")}</th>
+                    <th className="px-4 py-3">{t("descLabel")}</th>
+                    <th className="px-4 py-3 text-emerald-400">{t("navIncome")}</th>
+                    <th className="px-4 py-3 text-red-400">{t("navExpense")}</th>
+                    <th className="px-4 py-3 text-yellow-400">{t("totalProfit")}</th>
+                    <th className="px-4 py-3 text-purple-400">{t("navDonation")}</th>
+                    <th className="px-4 py-3 text-orange-400">{t("navWithdraw")}</th>
+                    <th className="px-4 py-3 text-blue-400">{t("navInvestment")}</th>
+                    <th className="px-4 py-3 text-cyan-400">{t("navReinvestment")}</th>
+                    <th className="px-4 py-3 text-rose-400">{t("navReturnedCash")}</th>
+                    <th className="px-4 py-3 rounded-tr-lg text-text-muted text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/40">
+                  {historySessions.map((session, idx) => {
+                    const inc = session.income as number;
+                    const exp = session.expense as number;
+                    const prof = inc - exp;
+                    return (
+                      <tr key={idx} className="hover:bg-surface-hover/50 transition-colors group">
+                        <td className="px-4 py-4 font-medium whitespace-nowrap">{session.date}</td>
+                        <td className="px-4 py-4 text-xs text-text-muted">{session.note}</td>
+                        <td className="px-4 py-4 font-bold text-emerald-400">{t("takaSymbol")}{inc.toLocaleString()}</td>
+                        <td className="px-4 py-4 font-bold text-red-400">{t("takaSymbol")}{exp.toLocaleString()}</td>
+                        <td className={`px-4 py-4 font-bold ${prof >= 0 ? "text-yellow-400" : "text-red-400"}`}>{t("takaSymbol")}{prof.toLocaleString()}</td>
+                        <td className="px-4 py-4">{t("takaSymbol")}{(session.donation as number).toLocaleString()}</td>
+                        <td className="px-4 py-4">{t("takaSymbol")}{(session.withdraw as number).toLocaleString()}</td>
+                        <td className="px-4 py-4">{t("takaSymbol")}{(session.investment as number).toLocaleString()}</td>
+                        <td className="px-4 py-4">{t("takaSymbol")}{(session.reinvestment as number).toLocaleString()}</td>
+                        <td className="px-4 py-4">{t("takaSymbol")}{(session.returnedCash as number).toLocaleString()}</td>
+                        <td className="px-4 py-4 text-center">
+                          <button
+                            onClick={() => handleDeleteSession(session.date, session.note as string)}
+                            className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/20 hover:border-red-500 transition-all duration-200 opacity-60 group-hover:opacity-100"
+                            title={language === "bn" ? "মুছুন" : "Delete"}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
-            {lastSaved && (
-              <p className="text-[9px] text-slate-500 text-right mt-4 font-bold tracking-wide uppercase">
-                {t("syncDb", { time: lastSaved })}
-              </p>
-            )}
           </CardContent>
         </Card>
-
-        {/* Quick Stats side column */}
-        <div className="lg:col-span-4 space-y-4">
-          {/* Profit margin */}
-          <Card>
-            <CardContent className="p-5">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                <PieChart className="w-3.5 h-3.5" /> {t("profitMargin")}
-              </p>
-              <div className="flex items-end gap-2">
-                <span className={`text-2xl font-black ${profit >= 0 ? "text-yellow-400" : "text-red-400"}`}>
-                  {totalIncome > 0 ? ((profit / totalIncome) * 100).toFixed(1) : "0"}%
-                </span>
-              </div>
-              <div className="mt-3.5 h-1.5 rounded-full bg-slate-800 overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all duration-500 ${profit >= 0 ? "bg-yellow-500" : "bg-red-500"}`}
-                  style={{ width: `${Math.min(Math.abs(totalIncome > 0 ? (profit / totalIncome) * 100 : 0), 100)}%` }}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Income vs Expense ratio */}
-          <Card>
-            <CardContent className="p-5">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                <Scale className="w-3.5 h-3.5" /> {t("incomeVsExpense")}
-              </p>
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-bold mt-1.5">
-                <span className="text-emerald-400">{t("navIncome")} {t("takaSymbol")}{totalIncome.toLocaleString()}</span>
-                <span className="text-slate-600">vs</span>
-                <span className="text-red-400">{t("navExpense")} {t("takaSymbol")}{totalExpense.toLocaleString()}</span>
-              </div>
-              <div className="mt-4.5 h-1.5 rounded-full bg-slate-800 overflow-hidden flex">
-                {totalIncome + totalExpense > 0 && (
-                  <>
-                    <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${(totalIncome / (totalIncome + totalExpense)) * 100}%` }} />
-                    <div className="h-full bg-red-500 transition-all duration-500" style={{ width: `${(totalExpense / (totalIncome + totalExpense)) * 100}%` }} />
-                  </>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* DB Status */}
-          <Card>
-            <CardContent className="p-5">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                <Database className="w-3.5 h-3.5" /> {t("dbStatus")}
-              </p>
-              <div className={`flex items-center gap-2 text-sm font-bold ${isDbConnected ? "text-emerald-400" : "text-red-400"}`}>
-                <span className={`w-2 h-2 rounded-full ${isDbConnected ? "bg-emerald-500 shadow-[0_0_8px_#10b981]" : "bg-red-500 shadow-[0_0_8px_#ef4444]"} pulse-dot`} />
-                {isDbConnected ? t("dbActive") : t("dbOfflineShort")}
-              </div>
-              <p className="text-[10px] text-slate-500 mt-3 font-semibold">
-                {t("recordsCount", { count: income.length + expense.length + donation.length + withdraw.length + returnedCash.length + investment.length + reinvestment.length })}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+      )}
     </div>
   );
 }

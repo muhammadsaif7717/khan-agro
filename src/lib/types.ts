@@ -13,6 +13,21 @@ export interface SavedTotalItem {
   note: string;
 }
 
+export interface Note {
+  id: string;
+  title: string;
+  description: string;
+  category: "general" | "milk" | "feed" | "finance" | "todo";
+  createdAt: string;
+}
+
+export interface Asset {
+  id: string;
+  name: string;
+  quantity: number;
+  updatedAt: string;
+}
+
 export interface FarmData {
   income: RecordItem[];
   expense: RecordItem[];
@@ -22,6 +37,9 @@ export interface FarmData {
   reinvestment: RecordItem[];
   returnedCash: RecordItem[];
   savedTotals?: Record<string, SavedTotalItem[]>;
+  notes?: Note[];
+  assets?: Asset[];
+  calcHistory?: string[];
 }
 
 export interface Credentials {
