@@ -107,37 +107,37 @@ export default function AccountPage() {
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-fade-in select-none">
       {/* Top Breadcrumb Header */}
-      <div className="flex items-center justify-between pb-4 border-b border-slate-800/80">
+      <div className="flex items-center justify-between pb-4 border-b border-border">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <Link 
               href="/" 
-              className="p-1.5 rounded-xl bg-slate-800/40 hover:bg-slate-800/80 border border-slate-800/60 transition-colors text-slate-400 hover:text-white"
+              className="p-1.5 rounded-xl bg-surface-hover/50 hover:bg-surface-hover border border-border transition-colors text-text-muted hover:text-text-primary"
             >
               <ArrowLeft className="w-4 h-4" />
             </Link>
-            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-2.5">
+            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-text-primary flex items-center gap-2.5">
               <ShieldCheck className="w-6 h-6 text-emerald-400" /> {t("accountTitle")}
             </h1>
           </div>
-          <p className="text-xs text-slate-400 font-medium pl-8">{t("accountDesc")}</p>
+          <p className="text-xs text-text-muted font-medium pl-8">{t("accountDesc")}</p>
         </div>
       </div>
 
       {/* Grid for forms */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Username form Card */}
-        <div className="bg-[#0e1626]/60 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 shadow-2xl space-y-4 hover:border-slate-800 transition-all duration-300">
-          <div className="flex items-center gap-2 pb-3 border-b border-slate-800/60">
+        <div className="glass-panel rounded-3xl p-6 space-y-4 transition-all duration-300">
+          <div className="flex items-center gap-2 pb-3 border-b border-border">
             <div className="p-2 bg-emerald-500/10 rounded-xl border border-emerald-500/20 text-emerald-400">
               <User className="w-5 h-5" />
             </div>
-            <h3 className="text-md font-extrabold text-slate-100">{t("usernameChangeTitle")}</h3>
+            <h3 className="text-md font-extrabold text-text-primary">{t("usernameChangeTitle")}</h3>
           </div>
 
           <form onSubmit={handleChangeUsername} className="space-y-4">
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t("usernameLabel") || "New Username"}</label>
+              <label className="text-xs font-bold text-text-muted uppercase tracking-wider">{t("usernameLabel") || "New Username"}</label>
               <Input 
                 type="text" 
                 placeholder={t("newUsernamePlaceholder")} 
@@ -149,7 +149,7 @@ export default function AccountPage() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t("confirmPassPlaceholder") || "Confirm Password"}</label>
+              <label className="text-xs font-bold text-text-muted uppercase tracking-wider">{t("confirmPassPlaceholder") || "Confirm Password"}</label>
               <div className="relative">
                 <Input 
                   type={showUnamePass ? "text" : "password"} 
@@ -162,7 +162,7 @@ export default function AccountPage() {
                 <button 
                   type="button" 
                   onClick={() => setShowUnamePass(!showUnamePass)} 
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-450 hover:text-slate-200 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary transition-colors"
                   disabled={usernameLoading}
                 >
                   {showUnamePass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -193,17 +193,17 @@ export default function AccountPage() {
         </div>
 
         {/* Password form Card */}
-        <div className="bg-[#0e1626]/60 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 shadow-2xl space-y-4 hover:border-slate-800 transition-all duration-300">
-          <div className="flex items-center gap-2 pb-3 border-b border-slate-800/60">
+        <div className="glass-panel rounded-3xl p-6 space-y-4 transition-all duration-300">
+          <div className="flex items-center gap-2 pb-3 border-b border-border">
             <div className="p-2 bg-emerald-500/10 rounded-xl border border-emerald-500/20 text-emerald-400">
               <KeyRound className="w-5 h-5" />
             </div>
-            <h3 className="text-md font-extrabold text-slate-100">{t("passwordChangeTitle")}</h3>
+            <h3 className="text-md font-extrabold text-text-primary">{t("passwordChangeTitle")}</h3>
           </div>
 
           <form onSubmit={handleChangePassword} className="space-y-4">
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t("currentPasswordPlaceholder") || "Current Password"}</label>
+              <label className="text-xs font-bold text-text-muted uppercase tracking-wider">{t("currentPasswordPlaceholder") || "Current Password"}</label>
               <div className="relative">
                 <Input 
                   type={showOldPass ? "text" : "password"} 
@@ -216,7 +216,7 @@ export default function AccountPage() {
                 <button 
                   type="button" 
                   onClick={() => setShowOldPass(!showOldPass)} 
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-450 hover:text-slate-200 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary transition-colors"
                   disabled={passwordLoading}
                 >
                   {showOldPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -225,7 +225,7 @@ export default function AccountPage() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t("newPasswordPlaceholder") || "New Password"}</label>
+              <label className="text-xs font-bold text-text-muted uppercase tracking-wider">{t("newPasswordPlaceholder") || "New Password"}</label>
               <div className="relative">
                 <Input 
                   type={showNewPass ? "text" : "password"} 
@@ -238,7 +238,7 @@ export default function AccountPage() {
                 <button 
                   type="button" 
                   onClick={() => setShowNewPass(!showNewPass)} 
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-450 hover:text-slate-200 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary transition-colors"
                   disabled={passwordLoading}
                 >
                   {showNewPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -247,7 +247,7 @@ export default function AccountPage() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t("confirmNewPasswordPlaceholder") || "Confirm New Password"}</label>
+              <label className="text-xs font-bold text-text-muted uppercase tracking-wider">{t("confirmNewPasswordPlaceholder") || "Confirm New Password"}</label>
               <div className="relative">
                 <Input 
                   type={showConfirmNewPass ? "text" : "password"} 
@@ -260,7 +260,7 @@ export default function AccountPage() {
                 <button 
                   type="button" 
                   onClick={() => setShowConfirmNewPass(!showConfirmNewPass)} 
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-450 hover:text-slate-200 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary transition-colors"
                   disabled={passwordLoading}
                 >
                   {showConfirmNewPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -292,25 +292,25 @@ export default function AccountPage() {
       </div>
 
       {/* Backup & Restore Panel */}
-      <div className="bg-[#0e1626]/60 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 shadow-2xl space-y-6 hover:border-slate-800 transition-all duration-300 mt-6">
-        <div className="flex items-center gap-2 pb-3 border-b border-slate-800/60">
+      <div className="glass-panel rounded-3xl p-6 space-y-6 transition-all duration-300 mt-6">
+        <div className="flex items-center gap-2 pb-3 border-b border-border">
           <div className="p-2 bg-emerald-500/10 rounded-xl border border-emerald-500/20 text-emerald-400">
             <Database className="w-5 h-5" />
           </div>
           <div className="space-y-0.5">
-            <h3 className="text-md font-extrabold text-slate-100">ডাটা ব্যাকআপ ও পুনরুদ্ধার (Backup & Restore)</h3>
-            <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">ডাটাবেজ সুরক্ষা ও রিস্টোরেশন টুলস</p>
+            <h3 className="text-md font-extrabold text-text-primary">{t("backupSectionTitle")}</h3>
+            <p className="text-[10px] text-text-muted font-semibold uppercase tracking-wider">{t("backupSectionSubtitle")}</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
           {/* Export section */}
-          <div className="space-y-3 p-5 rounded-2xl bg-[#090d16]/40 border border-slate-800/50">
-            <h4 className="text-sm font-bold text-slate-200 flex items-center gap-1.5 font-extrabold">
-              <Download className="w-4 h-4 text-emerald-400" /> ব্যাকআপ ফাইল ডাউনলোড করুন
+          <div className="space-y-3 p-5 rounded-2xl bg-bg/40 border border-border">
+            <h4 className="text-sm font-bold text-text-secondary flex items-center gap-1.5 font-extrabold">
+              <Download className="w-4 h-4 text-emerald-400" /> {t("backupExportTitle")}
             </h4>
-            <p className="text-xs text-slate-400 leading-relaxed font-medium">
-              আপনার খামারের আয়, ব্যয়, দান, উত্তোলন এবং বিনিয়োগের সমস্ত ডাটা সুরক্ষিত রাখতে একটি `.json` ব্যাকআপ ফাইল ডাউনলোড করে আপনার লোকাল ডিভাইসে সংরক্ষণ করুন।
+            <p className="text-xs text-text-muted leading-relaxed font-medium">
+              {t("backupExportDesc")}
             </p>
             <Button
               onClick={exportBackup}
@@ -318,17 +318,17 @@ export default function AccountPage() {
               variant="emerald"
               className="w-full h-11 text-xs font-bold flex items-center justify-center gap-2 mt-4"
             >
-              <Download className="w-4 h-4" /> ব্যাকআপ ফাইল ডাউনলোড করুন (JSON)
+              <Download className="w-4 h-4" /> {t("backupExportButton")}
             </Button>
           </div>
 
           {/* Import section */}
-          <div className="space-y-3 p-5 rounded-2xl bg-[#090d16]/40 border border-slate-800/50">
-            <h4 className="text-sm font-bold text-slate-200 flex items-center gap-1.5 font-extrabold">
-              <Upload className="w-4 h-4 text-emerald-400" /> ব্যাকআপ ফাইল রিস্টোর করুন
+          <div className="space-y-3 p-5 rounded-2xl bg-bg/40 border border-border">
+            <h4 className="text-sm font-bold text-text-secondary flex items-center gap-1.5 font-extrabold">
+              <Upload className="w-4 h-4 text-emerald-400" /> {t("backupImportTitle")}
             </h4>
-            <p className="text-xs text-slate-400 leading-relaxed font-medium">
-              আপনার ডিভাইসে সংরক্ষিত পূর্বের `.json` ব্যাকআপ ফাইলটি আপলোড করে আপনার বর্তমান খামারের সম্পূর্ণ ডাটাবেজ পুনরুদ্ধার বা রিস্টোর করতে পারেন।
+            <p className="text-xs text-text-muted leading-relaxed font-medium">
+              {t("backupImportDesc")}
             </p>
             
             <div className="relative mt-4">
@@ -343,9 +343,9 @@ export default function AccountPage() {
                 type="button"
                 disabled={!isDbConnected || importLoading}
                 variant="outline"
-                className="w-full h-11 text-xs font-bold border-slate-800 hover:bg-slate-800/50 text-slate-355 hover:text-white flex items-center justify-center gap-2 rounded-xl transition-all"
+                className="w-full h-11 text-xs font-bold border-border hover:bg-surface-hover text-text-secondary hover:text-text-primary flex items-center justify-center gap-2 rounded-xl transition-all"
               >
-                <Upload className="w-4 h-4 text-emerald-400" /> {importLoading ? "ফাইল প্রসেস হচ্ছে..." : "ব্যাকআপ ফাইল আপলোড করুন (.json)"}
+                <Upload className="w-4 h-4 text-emerald-400" /> {importLoading ? t("backupImportLoading") : t("backupImportButton")}
               </Button>
             </div>
           </div>

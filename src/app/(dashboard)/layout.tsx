@@ -163,7 +163,7 @@ function SettingsSidebar({ onClose }: { onClose: () => void }) {
           <Button 
             onClick={handleLogout} 
             variant="destructive" 
-            className="w-full flex items-center justify-center gap-2 bg-red-950/40 hover:bg-red-900 border border-red-900/50 rounded-xl text-red-400 font-bold h-11 transition-all duration-200 shadow-md hover:shadow-red-950/20"
+            className="w-full flex items-center justify-center gap-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 hover:border-red-500/30 rounded-xl text-red-400 font-bold h-11 transition-all duration-200"
           >
             <LogOut className="w-4 h-4 text-red-400" /> {t("logout")}
           </Button>
