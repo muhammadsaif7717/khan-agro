@@ -11,6 +11,7 @@ export interface SavedTotalItem {
   amount: number;
   date: string;
   note: string;
+  id?: string;
 }
 
 export interface Note {

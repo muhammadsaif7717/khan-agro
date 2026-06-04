@@ -84,6 +84,7 @@ export default function RecordTab({
 
   // Sync activeType when type prop changes
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setActiveType(type);
     setForm(prev => ({
       ...prev,
@@ -91,13 +92,7 @@ export default function RecordTab({
     }));
   }, [type]);
 
-  const handleTypeChange = (newType: Exclude<keyof FarmData, "savedTotals" | "notes" | "assets" | "calcHistory">) => {
-    setActiveType(newType);
-    setForm(prev => ({
-      ...prev,
-      investmentType: newType as "investment" | "reinvestment"
-    }));
-  };
+
 
   const Icon = ICON_MAP[activeType] || Briefcase;
   

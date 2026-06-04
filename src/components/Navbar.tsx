@@ -132,7 +132,7 @@ export default function Navbar() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex-1 sm:flex-initial sm:px-5 flex flex-col items-center justify-center gap-1 sm:gap-2 transition-all hover:scale-105 active:scale-95 relative rounded-xl ${
+              className={`flex-1 sm:flex-initial sm:px-5 flex flex-col items-center justify-center gap-1 sm:gap-2 transition hover:scale-105 active:scale-95 relative rounded-xl ${
                 isActive ? "text-emerald-400 font-bold" : "text-text-muted hover:text-text-primary"
               }`}
             >
@@ -146,13 +146,13 @@ export default function Navbar() {
         {/* Tools Popover Button */}
         <button
           onClick={handleToolsToggle}
-          className={`flex-1 sm:flex-initial sm:px-5 flex flex-col items-center justify-center gap-1 sm:gap-2 transition-all hover:scale-105 active:scale-95 relative rounded-xl ${
+          className={`flex-1 sm:flex-initial sm:px-5 flex flex-col items-center justify-center gap-1 sm:gap-2 transition hover:scale-105 active:scale-95 relative rounded-xl ${
             isToolActive || toolsOpen
               ? "text-emerald-400 font-bold"
               : "text-text-muted hover:text-text-primary"
           }`}
         >
-          <Wrench className={`w-[18px] h-[18px] sm:w-[22px] sm:h-[22px] transition-all duration-300 ${isToolActive || toolsOpen ? "text-emerald-400 scale-105" : "text-text-muted"}`} />
+          <Wrench className={`w-[18px] h-[18px] sm:w-[22px] sm:h-[22px] transition duration-200 ${isToolActive || toolsOpen ? "text-emerald-400 scale-105" : "text-text-muted"}`} />
           <span className="text-[7.5px] sm:text-[11.5px] tracking-tight sm:tracking-normal font-semibold sm:font-bold whitespace-nowrap">{t("navTools")}</span>
           {isToolActive && (
             <span className="absolute bottom-1 sm:bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#10b981]" />

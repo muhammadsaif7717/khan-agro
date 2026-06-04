@@ -175,7 +175,7 @@ function SettingsSidebar({ onClose }: { onClose: () => void }) {
 
 // ─── Dashboard Layout ─────────────────────────────────────────────────────────
 export default function DashboardLayout({ children }: { children: ReactNode }) {
-  const { isAuthenticated, isLoading, isDbConnected, logout, theme, toggleTheme, language, t } = useApp();
+  const { isAuthenticated, isLoading, isDbConnected, language, t } = useApp();
   const router = useRouter();
   const [settingsOpen, setSettingsOpen] = useState(false);
 

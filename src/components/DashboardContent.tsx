@@ -11,7 +11,7 @@ import { RecordItem, FarmData } from "@/lib/types";
 
 export default function DashboardContent() {
   const {
-    income, expense, donation, withdraw, investment, reinvestment, returnedCash, savedTotals,
+    income, expense, donation, withdraw, investment, reinvestment, savedTotals,
     t, language, setReturnedCashOffset, deleteHistorySession
   } = useApp();
 
@@ -57,15 +57,15 @@ export default function DashboardContent() {
   ];
 
   // ── Compute History Sessions ──────────────────────────────────────────────────
-  const sessionsMap: Record<string, { date: string; note: string; [key: string]: string | number }> = {};
+  const sessionsMap: Record<string, { id?: string; date: string; note: string; [key: string]: string | number | undefined }> = {};
   const categories = ["income", "expense", "donation", "withdraw", "investment", "reinvestment", "returnedCash"] as const;
 
   categories.forEach((cat) => {
     const items = savedTotals[cat] || [];
     items.forEach((item) => {
-      const key = `${item.date}-${item.note}`;
+      const key = item.id ? item.id : `${item.date}-${item.note}`;
       if (!sessionsMap[key]) {
-        sessionsMap[key] = { date: item.date, note: item.note || "" };
+        sessionsMap[key] = { id: item.id, date: item.date, note: item.note || "" };
         categories.forEach(c => sessionsMap[key][c] = 0);
       }
       (sessionsMap[key][cat] as number) += item.amount;
@@ -74,9 +74,9 @@ export default function DashboardContent() {
 
   const historySessions = Object.values(sessionsMap).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-  const handleDeleteSession = async (date: string, note: string) => {
+  const handleDeleteSession = async (idOrDate: string, note: string) => {
     if (!confirm(language === "bn" ? "এই ইতিহাস মুছে ফেলতে চান?" : "Delete this history record?")) return;
-    await deleteHistorySession(date, note);
+    await deleteHistorySession(idOrDate, note);
   };
 
   return (
@@ -161,7 +161,7 @@ export default function DashboardContent() {
                         <td className="px-4 py-4">{t("takaSymbol")}{(session.returnedCash as number).toLocaleString()}</td>
                         <td className="px-4 py-4 text-center">
                           <button
-                            onClick={() => handleDeleteSession(session.date, session.note as string)}
+                            onClick={() => handleDeleteSession((session.id as string) || session.date, session.note as string)}
                             className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/20 hover:border-red-500 transition-all duration-200 opacity-60 group-hover:opacity-100"
                             title={language === "bn" ? "মুছুন" : "Delete"}
                           >

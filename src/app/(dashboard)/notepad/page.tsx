@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useApp } from "@/context/AppContext";
 import { 
   StickyNote, 
@@ -10,12 +10,11 @@ import {
   Search, 
   Copy, 
   Check, 
-  Tag, 
   Calendar,
   X,
   FileText
 } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -229,7 +228,7 @@ export default function NotepadPage() {
                 <label className="text-xs font-bold text-text-muted uppercase tracking-wider">{txt.categoryLabel}</label>
                 <select
                   value={noteCategory}
-                  onChange={(e: any) => setNoteCategory(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setNoteCategory(e.target.value as "general" | "milk" | "feed" | "finance" | "todo")}
                   className="flex h-11 w-full rounded-xl border border-border bg-bg px-3.5 py-2 text-xs text-text-primary outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 font-bold transition-all"
                 >
                   <option value="general">{txt.categories.general}</option>

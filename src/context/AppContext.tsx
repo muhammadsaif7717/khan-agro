@@ -111,6 +111,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const storedLang = localStorage.getItem("language") as Language;
     if (storedLang && (storedLang === "bn" || storedLang === "en")) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLanguageState(storedLang);
     } else {
       localStorage.setItem("language", "en");
@@ -291,6 +292,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (recordsData) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (recordsData.income) setIncome(recordsData.income);
       if (recordsData.expense) setExpense(recordsData.expense);
       if (recordsData.donation) setDonation(recordsData.donation);
@@ -407,7 +409,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const setReturnedCashOffset = useCallback(async (amount: number) => {
     const newSaved = { ...savedTotals };
     const currentList = newSaved["returnedCashOffset"] || [];
-    newSaved["returnedCashOffset"] = [...currentList, { amount, note: "Reset", date: new Date().toISOString().split("T")[0] }];
+    newSaved["returnedCashOffset"] = [...currentList, { amount, note: "Reset", date: new Date().toISOString().split("T")[0], id: Date.now().toString() }];
     setSavedTotals(newSaved);
     await saveAllData(income, expense, donation, withdraw, investment, reinvestment, returnedCash, newSaved);
   }, [income, expense, donation, withdraw, investment, reinvestment, returnedCash, savedTotals, saveAllData]);
@@ -422,10 +424,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (totalAmount === 0) return;
 
       const formattedDate = new Date().toISOString().split("T")[0];
+      const sessionId = Date.now().toString();
       const newSavedItem: SavedTotalItem = {
         amount: totalAmount,
         date: formattedDate,
-        note: note?.trim() || `Reset on ${formattedDate}`
+        note: note?.trim() || `Reset on ${formattedDate}`,
+        id: sessionId
       };
 
       const updatedSavedTotals = {
@@ -456,6 +460,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       
       const formattedDate = new Date().toISOString().split("T")[0];
       const defaultNote = note?.trim() || `Reset on ${formattedDate}`;
+      const sessionId = Date.now().toString();
       const updatedSavedTotals = { ...savedTotals };
       
       let hasUpdates = false;
@@ -468,7 +473,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           const newSavedItem: SavedTotalItem = {
             amount: totalAmount,
             date: formattedDate,
-            note: defaultNote
+            note: defaultNote,
+            id: sessionId
           };
           updatedSavedTotals[type] = [...(updatedSavedTotals[type] || []), newSavedItem];
         }
@@ -512,12 +518,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 
   const deleteHistorySession = useCallback(
-    async (date: string, note: string) => {
+    async (idOrDate: string, note: string) => {
       // Build updated savedTotals in one pass — filter out ALL entries matching this session key
       const updatedSavedTotals: Record<string, SavedTotalItem[]> = {};
       for (const key of Object.keys(savedTotals)) {
         updatedSavedTotals[key] = (savedTotals[key] || []).filter(
-          (item) => !(item.date === date && (item.note ?? "") === note)
+          (item) => {
+            if (item.id) {
+              return item.id !== idOrDate;
+            }
+            return !(item.date === idOrDate && (item.note ?? "") === note);
+          }
         );
       }
       setSavedTotals(updatedSavedTotals);

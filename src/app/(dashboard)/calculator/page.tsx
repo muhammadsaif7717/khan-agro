@@ -15,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
 export default function CalculatorPage() {
-  const { t, language, calcHistory, setCalcHistory, saveAllData } = useApp();
+  const { language, calcHistory, setCalcHistory, saveAllData } = useApp();
 
   const [calcInput, setCalcInput] = useState("");
   const [calcResult, setCalcResult] = useState("");
@@ -38,7 +38,6 @@ export default function CalculatorPage() {
         
         if (!sanitized) return;
 
-        // eslint-disable-next-line no-new-func
         const res = new Function(`return ${sanitized}`)();
         
         if (res === undefined || isNaN(res) || !isFinite(res)) {
