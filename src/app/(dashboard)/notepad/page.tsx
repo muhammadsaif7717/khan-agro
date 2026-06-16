@@ -80,7 +80,7 @@ const categoryStyles = {
 };
 
 export default function NotepadPage() {
-  const { language, notes, setNotes, saveAllData } = useApp();
+  const { language, notes, setNotes, saveAllData, showConfirm } = useApp();
   const lang = language === "bn" ? "bn" : "en";
   const txt = texts[lang];
 
@@ -160,13 +160,17 @@ export default function NotepadPage() {
   };
 
   const handleDeleteNote = (id: string) => {
-    if (confirm(txt.deleteConfirm)) {
-      const filtered = notes.filter((n) => n.id !== id);
-      saveNotesToDB(filtered);
-      if (editingId === id) {
-        handleCancelEdit();
+    showConfirm({
+      message: txt.deleteConfirm,
+      type: "danger",
+      onConfirm: () => {
+        const filtered = notes.filter((n) => n.id !== id);
+        saveNotesToDB(filtered);
+        if (editingId === id) {
+          handleCancelEdit();
+        }
       }
-    }
+    });
   };
 
   const handleCopyToClipboard = (note: Note) => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useApp } from "@/context/AppContext";
 import { 
   User, 
@@ -13,14 +13,79 @@ import {
   ArrowLeft,
   Database,
   Download,
-  Upload
+  Upload,
+  History,
+  Smartphone,
+  Monitor,
+  Trash2,
+  Globe
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 export default function AccountPage() {
-  const { isDbConnected, changeUsername, changePassword, exportBackup, importBackup, t } = useApp();
+  const { isDbConnected, changeUsername, changePassword, exportBackup, importBackup, showConfirm, language, logout, t } = useApp();
+
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [sessionsError, setSessionsError] = useState("");
+
+  const fetchSessions = async () => {
+    setSessionsLoading(true);
+    setSessionsError("");
+    try {
+      const res = await fetch("/api/sessions");
+      if (!res.ok) throw new Error("Failed to load sessions");
+      const data = await res.json();
+      setSessions(data);
+    } catch (err: any) {
+      setSessionsError(err.message || "Error");
+    } finally {
+      setSessionsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSessions();
+  }, []);
+
+  const handleTerminateSession = async (sessionId: string, isCurrent: boolean) => {
+    showConfirm({
+      message: language === "bn" 
+        ? "আপনি কি নিশ্চিতভাবে এই ডিভাইস থেকে লগআউট করতে চান?" 
+        : "Are you sure you want to terminate this login session?",
+      type: "danger",
+      onConfirm: async () => {
+        try {
+          const res = await fetch("/api/sessions", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sessionId })
+          });
+          if (res.ok) {
+            if (isCurrent) {
+              logout();
+              window.location.href = "/login";
+            } else {
+              fetchSessions();
+            }
+          }
+        } catch (err) {
+          console.error("Failed to terminate session:", err);
+        }
+      }
+    });
+  };
+
+  const formatSessionTime = (isoString: string) => {
+    try {
+      const date = new Date(isoString);
+      return date.toLocaleString(language === "bn" ? "bn-BD" : "en-US");
+    } catch {
+      return isoString;
+    }
+  };
 
   // Import states
   const [importMsg, setImportMsg] = useState({ text: "", ok: false });
@@ -359,6 +424,92 @@ export default function AccountPage() {
           }`}>
             <span className={`w-1.5 h-1.5 rounded-full ${importMsg.ok ? "bg-emerald-400" : "bg-red-450"}`} />
             {importMsg.text}
+          </div>
+        )}
+      </div>
+
+      {/* ── Active Sessions Panel ── */}
+      <div id="login-history" className="glass-panel rounded-3xl p-6 space-y-4 transition-all duration-300 mt-6 scroll-mt-20">
+        <div className="flex items-center gap-2 pb-3 border-b border-border">
+          <div className="p-2 bg-emerald-500/10 rounded-xl border border-emerald-500/20 text-emerald-400">
+            <History className="w-5 h-5" />
+          </div>
+          <div className="space-y-0.5">
+            <h3 className="text-md font-extrabold text-text-primary">{t("activeSessions")}</h3>
+            <p className="text-[10px] text-text-muted font-semibold uppercase tracking-wider">
+              {language === "bn" ? "আপনার অ্যাকাউন্টের সক্রিয় সেশনসমূহের তালিকা" : "Manage active devices connected to your account"}
+            </p>
+          </div>
+        </div>
+
+        {sessionsLoading && (
+          <div className="text-center py-8 text-xs text-text-muted font-semibold">
+            {language === "bn" ? "সেশনসমূহ লোড হচ্ছে..." : "Loading sessions..."}
+          </div>
+        )}
+
+        {sessionsError && (
+          <div className="text-center py-8 text-xs text-red-400 font-bold">
+            ❌ {sessionsError}
+          </div>
+        )}
+
+        {!sessionsLoading && !sessionsError && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {sessions.map((session) => {
+              const isDesktop = !/iOS|Android/i.test(session.device);
+              const DeviceIcon = isDesktop ? Monitor : Smartphone;
+
+              return (
+                <div 
+                  key={session.id}
+                  className={`p-4 rounded-2xl bg-bg/40 border transition-all duration-200 flex justify-between items-start gap-4 ${
+                    session.isCurrent 
+                      ? "border-emerald-500/30 bg-emerald-500/[0.02]" 
+                      : "border-border hover:border-border/80"
+                  }`}
+                >
+                  <div className="flex gap-3 items-start">
+                    <div className={`p-2.5 rounded-xl border shrink-0 mt-0.5 ${
+                      session.isCurrent 
+                        ? "bg-emerald-500/15 border-emerald-500/20 text-emerald-400" 
+                        : "bg-surface-hover/80 border-border text-text-secondary"
+                    }`}>
+                      <DeviceIcon className="w-4 h-4" />
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-black text-text-primary break-all">{session.device}</span>
+                        {session.isCurrent && (
+                          <span className="text-[8.5px] font-black uppercase tracking-wider text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                            {t("sessionCurrent")}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[10px] text-text-muted font-bold flex items-center gap-1">
+                        <Globe className="w-3 h-3" />
+                        <span>{t("sessionIp")}: {session.ip}</span>
+                      </div>
+                      <div className="text-[9px] text-text-muted font-semibold">
+                        {t("sessionLoginTime")}: {formatSessionTime(session.createdAt)}
+                      </div>
+                    </div>
+                  </div>
+
+                  {!session.isCurrent && (
+                    <Button
+                      onClick={() => handleTerminateSession(session.id, session.isCurrent)}
+                      variant="destructive"
+                      size="icon"
+                      className="rounded-xl w-8 h-8 shrink-0 flex items-center justify-center transition-all bg-red-500/10 border border-red-500/20 hover:bg-red-500 hover:text-white text-red-400"
+                      title={t("sessionLogoutBtn")}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

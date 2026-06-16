@@ -31,7 +31,7 @@ export const NAV_ITEMS = [
 
 export default function Navbar() {
   const pathname = usePathname();
-  const { t, saveAndResetAll } = useApp();
+  const { t, saveAndResetAll, showConfirm } = useApp();
   const [toolsOpen, setToolsOpen] = useState(false);
 
   const isToolActive = pathname === "/calculator" || pathname === "/notepad" || pathname === "/agro-count";
@@ -55,10 +55,14 @@ export default function Navbar() {
 
   const handleResetAndSave = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (confirm(t("resetConfirm"))) {
-      setToolsOpen(false);
-      await saveAndResetAll();
-    }
+    showConfirm({
+      message: t("resetConfirm"),
+      type: "danger",
+      onConfirm: async () => {
+        setToolsOpen(false);
+        await saveAndResetAll();
+      }
+    });
   };
 
   return (

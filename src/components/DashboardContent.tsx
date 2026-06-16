@@ -12,13 +12,18 @@ import { RecordItem, FarmData } from "@/lib/types";
 export default function DashboardContent() {
   const {
     income, expense, donation, withdraw, investment, reinvestment, savedTotals,
-    t, language, setReturnedCashOffset, deleteHistorySession
+    t, language, setReturnedCashOffset, deleteHistorySession, showConfirm
   } = useApp();
 
   const handleResetReturnedCash = async (amount: number) => {
     if (amount <= 0) return;
-    if (!confirm(language === "bn" ? "আপনি কি নিশ্চিতভাবে রিটার্ন ক্যাশ 0 করতে চান?" : "Are you sure you want to reset Returned Cash to 0?")) return;
-    await setReturnedCashOffset(amount);
+    showConfirm({
+      message: language === "bn" ? "আপনি কি নিশ্চিতভাবে রিটার্ন ক্যাশ 0 করতে চান?" : "Are you sure you want to reset Returned Cash to 0?",
+      type: "danger",
+      onConfirm: async () => {
+        await setReturnedCashOffset(amount);
+      }
+    });
   };
 
   // Helper to calculate active total (ignoring saved history)
@@ -57,8 +62,8 @@ export default function DashboardContent() {
   ];
 
   // ── Compute History Sessions ──────────────────────────────────────────────────
-  const sessionsMap: Record<string, { id?: string; date: string; note: string; [key: string]: string | number | undefined }> = {};
-  const categories = ["income", "expense", "donation", "withdraw", "investment", "reinvestment", "returnedCash"] as const;
+  const sessionsMap: Record<string, { id?: string; date: string; note: string; [key: string]: string | number | boolean | undefined }> = {};
+  const categories = ["income", "expense", "donation", "withdraw", "investment", "reinvestment", "cashBalance"] as const;
 
   categories.forEach((cat) => {
     const items = savedTotals[cat] || [];
@@ -69,14 +74,22 @@ export default function DashboardContent() {
         categories.forEach(c => sessionsMap[key][c] = 0);
       }
       (sessionsMap[key][cat] as number) += item.amount;
+      if (cat === "cashBalance") {
+        sessionsMap[key]["hasCashBalanceRecord"] = true;
+      }
     });
   });
 
   const historySessions = Object.values(sessionsMap).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   const handleDeleteSession = async (idOrDate: string, note: string) => {
-    if (!confirm(language === "bn" ? "এই ইতিহাস মুছে ফেলতে চান?" : "Delete this history record?")) return;
-    await deleteHistorySession(idOrDate, note);
+    showConfirm({
+      message: language === "bn" ? "এই ইতিহাস মুছে ফেলতে চান?" : "Delete this history record?",
+      type: "danger",
+      onConfirm: async () => {
+        await deleteHistorySession(idOrDate, note);
+      }
+    });
   };
 
   return (
@@ -138,7 +151,7 @@ export default function DashboardContent() {
                     <th className="px-4 py-3 text-orange-400">{t("navWithdraw")}</th>
                     <th className="px-4 py-3 text-blue-400">{t("navInvestment")}</th>
                     <th className="px-4 py-3 text-cyan-400">{t("navReinvestment")}</th>
-                    <th className="px-4 py-3 text-rose-400">{t("navReturnedCash")}</th>
+                    <th className="px-4 py-3 text-indigo-400">{t("calcCashBalance")}</th>
                     <th className="px-4 py-3 rounded-tr-lg text-text-muted text-center">Action</th>
                   </tr>
                 </thead>
@@ -147,6 +160,9 @@ export default function DashboardContent() {
                     const inc = session.income as number;
                     const exp = session.expense as number;
                     const prof = inc - exp;
+                    const cashBalance = session.hasCashBalanceRecord 
+                      ? (session.cashBalance as number) 
+                      : ((session.reinvestment as number) - (session.expense as number));
                     return (
                       <tr key={idx} className="hover:bg-surface-hover/50 transition-colors group">
                         <td className="px-4 py-4 font-medium whitespace-nowrap">{session.date}</td>
@@ -158,7 +174,9 @@ export default function DashboardContent() {
                         <td className="px-4 py-4">{t("takaSymbol")}{(session.withdraw as number).toLocaleString()}</td>
                         <td className="px-4 py-4">{t("takaSymbol")}{(session.investment as number).toLocaleString()}</td>
                         <td className="px-4 py-4">{t("takaSymbol")}{(session.reinvestment as number).toLocaleString()}</td>
-                        <td className="px-4 py-4">{t("takaSymbol")}{(session.returnedCash as number).toLocaleString()}</td>
+                        <td className={`px-4 py-4 font-bold ${cashBalance >= 0 ? "text-indigo-400" : "text-red-400"}`}>
+                          {t("takaSymbol")}{cashBalance.toLocaleString()}
+                        </td>
                         <td className="px-4 py-4 text-center">
                           <button
                             onClick={() => handleDeleteSession((session.id as string) || session.date, session.note as string)}

@@ -63,7 +63,8 @@ export default function RecordTab({
     saveAndResetCategory,
     deleteSavedTotal,
     t,
-    language
+    language,
+    showConfirm
   } = useApp();
 
   const [activeType, setActiveType] = useState<Exclude<keyof FarmData, "savedTotals" | "notes" | "assets" | "calcHistory">>(type);
@@ -131,7 +132,12 @@ export default function RecordTab({
 
   const handleAdd = async () => {
     if (!form.text.trim() || !form.amount) {
-      alert(t("pleaseFillAll"));
+      showConfirm({
+        message: t("pleaseFillAll"),
+        type: "info",
+        singleButton: true,
+        onConfirm: () => {}
+      });
       return;
     }
     setIsSaving(true);
@@ -147,20 +153,35 @@ export default function RecordTab({
   };
 
   const handleDelete = async (origIdx: number) => {
-    if (!confirm(t("confirmDelete"))) return;
-    await deleteItem(activeType, origIdx);
+    showConfirm({
+      message: t("confirmDelete"),
+      type: "danger",
+      onConfirm: async () => {
+        await deleteItem(activeType, origIdx);
+      }
+    });
   };
 
   const handleSaveReset = async () => {
     if (total === 0) return;
-    if (!confirm(language === "bn" ? "আপনি কি নিশ্চিতভাবে এই মোট হিসাব সেভ করে সক্রিয় তালিকা রিসেট করতে চান?" : "Are you sure you want to save this total and reset active list?")) return;
-    await saveAndResetCategory(activeType, resetNote);
-    setResetNote("");
+    showConfirm({
+      message: language === "bn" ? "আপনি কি নিশ্চিতভাবে এই মোট হিসাব সেভ করে সক্রিয় তালিকা রিসেট করতে চান?" : "Are you sure you want to save this total and reset active list?",
+      type: "danger",
+      onConfirm: async () => {
+        await saveAndResetCategory(activeType, resetNote);
+        setResetNote("");
+      }
+    });
   };
 
   const handleSavedDelete = async (idx: number) => {
-    if (!confirm(t("confirmDelete"))) return;
-    await deleteSavedTotal(activeType, idx);
+    showConfirm({
+      message: t("confirmDelete"),
+      type: "danger",
+      onConfirm: async () => {
+        await deleteSavedTotal(activeType, idx);
+      }
+    });
   };
 
   return (
@@ -252,48 +273,6 @@ export default function RecordTab({
             </CardContent>
           </Card>
 
-          {/* ── Save & Reset Card ── */}
-          {activeType === "returnedCash" && (
-            <Card>
-              <CardHeader className="pb-2 border-0">
-                <CardTitle className="text-xs font-black uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
-                  <History className="w-3.5 h-3.5 text-yellow-500" />
-                  {t("resetOption")}
-                </CardTitle>
-                <CardDescription className="text-[10px]">
-                  {language === "bn"
-                    ? "চলতি চক্রের হিসাব সংরক্ষণ করে সক্রিয় তালিকা রিসেট করুন।"
-                    : "Save the current cycle total and reset active list."}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="space-y-1">
-                  <Input
-                    type="text"
-                    placeholder={language === "bn" ? "যেমন: চক্র ১, মে ২০২৬..." : "e.g., Batch 1, May 2026..."}
-                    value={resetNote}
-                    onChange={(e) => setResetNote(e.target.value)}
-                    className="h-8 text-xs"
-                  />
-                </div>
-                <div className="flex justify-between items-center gap-3">
-                  <div className="text-left">
-                    <span className="text-[9px] text-text-muted font-bold block uppercase tracking-wide">{t("activeTotal")}</span>
-                    <span className="text-xs font-extrabold text-text-primary">{t("takaSymbol")} {total.toLocaleString()}</span>
-                  </div>
-                  <Button
-                    onClick={handleSaveReset}
-                    disabled={total === 0 || isDbConnected === false}
-                    variant="outline"
-                    size="sm"
-                    className="h-8 text-xs font-bold bg-yellow-500/10 hover:bg-yellow-500 hover:text-black border-yellow-500/30 text-yellow-400 rounded-lg flex items-center gap-1"
-                  >
-                    {t("saveReset")}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </div>
 
         {/* ── Right Column (Records List & Saved History) ── */}

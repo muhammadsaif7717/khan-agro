@@ -12,6 +12,17 @@ import { RecordItem, FarmData, SavedTotalItem, Note, Asset } from "@/lib/types";
 import { usePathname, useRouter } from "next/navigation";
 import { Language, TranslationKey, translations } from "@/lib/translations";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { AlertTriangle, Info, CheckCircle2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+
+export interface ConfirmOptions {
+  title?: string;
+  message: string;
+  onConfirm: () => void;
+  onCancel?: () => void;
+  type?: "danger" | "info" | "success";
+  singleButton?: boolean;
+}
 
 // ─── Context Shape ────────────────────────────────────────────────────────────
 
@@ -78,6 +89,7 @@ interface AppContextValue {
   changePassword: (oldPass: string, newPass: string, confirmNewPass: string) => Promise<{ ok: boolean; msg: string }>;
   exportBackup: () => void;
   importBackup: (jsonText: string) => Promise<{ ok: boolean; msg: string }>;
+  showConfirm: (options: ConfirmOptions) => void;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -87,6 +99,15 @@ const AppContext = createContext<AppContextValue | null>(null);
 export function AppProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [confirmState, setConfirmState] = useState<ConfirmOptions | null>(null);
+
+  const showConfirm = useCallback((options: ConfirmOptions) => {
+    setConfirmState(options);
+  }, []);
+
+  const closeConfirm = useCallback(() => {
+    setConfirmState(null);
+  }, []);
   const [income, setIncome] = useState<RecordItem[]>([]);
   const [expense, setExpense] = useState<RecordItem[]>([]);
   const [donation, setDonation] = useState<RecordItem[]>([]);
@@ -267,7 +288,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         });
         if (res.ok) {
           setIsDbConnected(true);
-          setLastSaved(new Date().toLocaleString("bn-BD"));
+          setLastSaved(new Date().toISOString());
           queryClient.invalidateQueries({ queryKey: ["records"] });
         } else {
           setIsDbConnected(false);
@@ -305,7 +326,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (recordsData.assets) setAssets(recordsData.assets);
       if (recordsData.calcHistory) setCalcHistory(recordsData.calcHistory);
       setIsDbConnected(!recordsData.dbOffline);
-      if (!recordsData.dbOffline) setLastSaved(new Date().toLocaleString("bn-BD"));
+      if (!recordsData.dbOffline) setLastSaved(new Date().toISOString());
     }
   }, [recordsData]);
 
@@ -465,18 +486,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
       
       let hasUpdates = false;
 
+      // Calculate cash balance of the active cycle before resetting
+      const activeReinvestment = reinvestment.reduce((sum, item) => sum + item.amount, 0);
+      const activeExpense = expense.reduce((sum, item) => sum + item.amount, 0);
+      const activeCashBalanceVal = activeReinvestment - activeExpense;
+
       (Object.keys(listMap) as Array<Exclude<keyof FarmData, "savedTotals" | "notes" | "assets" | "calcHistory">>).forEach((type) => {
         const list = listMap[type];
         const totalAmount = list.reduce((sum, item) => sum + item.amount, 0);
         if (totalAmount > 0) {
           hasUpdates = true;
-          const newSavedItem: SavedTotalItem = {
-            amount: totalAmount,
-            date: formattedDate,
-            note: defaultNote,
-            id: sessionId
-          };
-          updatedSavedTotals[type] = [...(updatedSavedTotals[type] || []), newSavedItem];
+          // Do not add returnedCash to the history totals
+          if (type !== "returnedCash") {
+            const newSavedItem: SavedTotalItem = {
+              amount: totalAmount,
+              date: formattedDate,
+              note: defaultNote,
+              id: sessionId
+            };
+            updatedSavedTotals[type] = [...(updatedSavedTotals[type] || []), newSavedItem];
+          }
         }
       });
 
@@ -487,6 +516,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
 
       if (!hasUpdates) return;
+
+      // Save calculated cash balance under key "cashBalance"
+      const newSavedCashBalanceItem: SavedTotalItem = {
+        amount: activeCashBalanceVal,
+        date: formattedDate,
+        note: defaultNote,
+        id: sessionId
+      };
+      updatedSavedTotals["cashBalance"] = [...(updatedSavedTotals["cashBalance"] || []), newSavedCashBalanceItem];
 
       setSavedTotals(updatedSavedTotals);
       setIncome([]);
@@ -641,11 +679,100 @@ export function AppProvider({ children }: { children: ReactNode }) {
         notes, setNotes, assets, setAssets, calcHistory, setCalcHistory,
         isDbConnected, isLoading, lastSaved,
         addItem, deleteItem, saveAndResetCategory, saveAndResetAll, deleteSavedTotal, deleteHistorySession, setReturnedCashOffset,
-        changeUsername, changePassword, exportBackup, importBackup, saveAllData
+        changeUsername, changePassword, exportBackup, importBackup, saveAllData,
+        showConfirm
       }}
     >
       {children}
+      {confirmState && (
+        <ConfirmDialog
+          options={confirmState}
+          onClose={closeConfirm}
+          language={language}
+        />
+      )}
     </AppContext.Provider>
+  );
+}
+
+function ConfirmDialog({ 
+  options, 
+  onClose,
+  language
+}: { 
+  options: ConfirmOptions; 
+  onClose: () => void;
+  language: string;
+}) {
+  const { title, message, onConfirm, onCancel, type = "danger", singleButton = false } = options;
+
+  const handleConfirm = () => {
+    onConfirm();
+    onClose();
+  };
+
+  const handleCancel = () => {
+    if (onCancel) onCancel();
+    onClose();
+  };
+
+  const Icon = type === "danger" 
+    ? AlertTriangle 
+    : type === "success" 
+      ? CheckCircle2 
+      : Info;
+
+  const iconColor = type === "danger" 
+    ? "text-red-400 bg-red-500/10 border-red-500/20" 
+    : type === "success" 
+      ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" 
+      : "text-indigo-400 bg-indigo-500/10 border-indigo-500/20";
+
+  const confirmBtnBg = type === "danger"
+    ? "bg-red-500 hover:bg-red-600 text-white"
+    : "bg-emerald-500 hover:bg-emerald-600 text-white";
+
+  const cancelLabel = language === "bn" ? "বাতিল" : "Cancel";
+  const confirmLabel = singleButton
+    ? (language === "bn" ? "ঠিক আছে" : "OK")
+    : (language === "bn" ? "নিশ্চিত করুন" : "Confirm");
+  const defaultTitle = title || (
+    type === "danger" 
+      ? (language === "bn" ? "সতর্কতা" : "Warning") 
+      : (language === "bn" ? "নিশ্চিতকরণ" : "Confirmation")
+  );
+
+  return (
+    <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+      <div className="bg-surface border border-border/80 rounded-3xl w-full max-w-sm p-6 shadow-2xl flex flex-col items-center text-center animate-scale-in max-h-[90vh] overflow-y-auto">
+        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center border mb-4 ${iconColor}`}>
+          <Icon className="w-6 h-6" />
+        </div>
+        <h3 className="text-md font-black text-text-primary mb-2 tracking-tight">
+          {defaultTitle}
+        </h3>
+        <p className="text-xs text-text-secondary font-medium leading-relaxed mb-6 whitespace-pre-wrap break-words max-w-xs">
+          {message}
+        </p>
+        <div className="flex w-full gap-3 mt-auto">
+          {!singleButton && (
+            <Button
+              onClick={handleCancel}
+              variant="outline"
+              className="flex-1 h-11 text-xs font-bold border-border bg-surface-hover hover:bg-border/60 text-text-secondary transition-colors rounded-xl"
+            >
+              {cancelLabel}
+            </Button>
+          )}
+          <Button
+            onClick={handleConfirm}
+            className={`flex-1 h-11 text-xs font-bold rounded-xl transition-all ${confirmBtnBg}`}
+          >
+            {confirmLabel}
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }
 

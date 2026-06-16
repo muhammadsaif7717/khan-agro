@@ -59,7 +59,7 @@ const texts = {
 };
 
 export default function AgroCountPage() {
-  const { language, assets, setAssets, saveAllData } = useApp();
+  const { language, assets, setAssets, saveAllData, showConfirm } = useApp();
   const lang = language === "bn" ? "bn" : "en";
   const txt = texts[lang];
 
@@ -136,13 +136,17 @@ export default function AgroCountPage() {
   };
 
   const handleDeleteAsset = (id: string) => {
-    if (confirm(txt.deleteConfirm)) {
-      const filtered = assets.filter((a) => a.id !== id);
-      saveAssetsToDB(filtered);
-      if (editingId === id) {
-        handleCancelEdit();
+    showConfirm({
+      message: txt.deleteConfirm,
+      type: "danger",
+      onConfirm: () => {
+        const filtered = assets.filter((a) => a.id !== id);
+        saveAssetsToDB(filtered);
+        if (editingId === id) {
+          handleCancelEdit();
+        }
       }
-    }
+    });
   };
 
   // Instant increment / decrement count handler

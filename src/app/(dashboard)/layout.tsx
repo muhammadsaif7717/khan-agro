@@ -14,7 +14,8 @@ import {
   Sun,
   Moon,
   Globe,
-  ShieldAlert
+  ShieldAlert,
+  History
 } from "lucide-react";
 
 import Navbar from "@/components/Navbar";
@@ -25,19 +26,33 @@ import { Button } from "@/components/ui/button";
 function SettingsSidebar({ onClose }: { onClose: () => void }) {
   const router = useRouter();
   const { 
-    isDbConnected, lastSaved, language, setLanguage, t, theme, toggleTheme, logout 
+    isDbConnected, lastSaved, language, setLanguage, t, theme, toggleTheme, logout, showConfirm 
   } = useApp();
 
   const handleLogout = () => {
-    if (confirm(t("confirmLogout"))) {
-      logout();
-      onClose();
-      router.replace("/login");
-    }
+    showConfirm({
+      message: t("confirmLogout"),
+      type: "danger",
+      onConfirm: () => {
+        logout();
+        onClose();
+        router.replace("/login");
+      }
+    });
   };
 
-  const handleNavigateToAccount = () => {
-    router.push("/account");
+  const handleNavigateToAccount = (hash?: string) => {
+    if (hash) {
+      router.push(`/account${hash}`);
+      if (window.location.pathname === "/account") {
+        const el = document.getElementById(hash.substring(1));
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth" });
+        }
+      }
+    } else {
+      router.push("/account");
+    }
     onClose();
   };
 
@@ -62,7 +77,7 @@ function SettingsSidebar({ onClose }: { onClose: () => void }) {
               <X className="w-4 h-4 text-text-muted" />
             </Button>
           </div>
-
+ 
           {/* Database System Connection Status Pill */}
           <div className="p-3.5 bg-surface/80 border border-border/80 rounded-2xl flex flex-col gap-1.5 shadow-inner">
             <div className="flex items-center justify-between">
@@ -80,12 +95,12 @@ function SettingsSidebar({ onClose }: { onClose: () => void }) {
                   {language === "bn" ? "সর্বশেষ সিঙ্ক" : "Sync Time"}
                 </span>
                 <span className="text-text-secondary font-mono text-[9px] font-bold uppercase tracking-wider">
-                  {lastSaved}
+                  {new Date(lastSaved).toLocaleString(language === "bn" ? "bn-BD" : "en-US")}
                 </span>
               </div>
             )}
           </div>
-
+ 
           {/* Language Selection Toggle — closes on selection */}
           <div className="space-y-2.5">
             <h4 className="text-xs font-bold text-emerald-400 uppercase tracking-wide flex items-center gap-1.5 mb-2">
@@ -108,7 +123,7 @@ function SettingsSidebar({ onClose }: { onClose: () => void }) {
               </Button>
             </div>
           </div>
-
+ 
           {/* Theme Selection Toggle — closes on selection */}
           <div className="space-y-2.5 pt-2 border-t border-border">
             <h4 className="text-xs font-bold text-emerald-400 uppercase tracking-wide flex items-center gap-1.5 mb-2">
@@ -131,7 +146,7 @@ function SettingsSidebar({ onClose }: { onClose: () => void }) {
               </Button>
             </div>
           </div>
-
+ 
           {/* Security & Credentials Redirection list buttons */}
           <div className="space-y-2.5 pt-4 border-t border-border">
             <h4 className="text-xs font-bold text-emerald-400 uppercase tracking-wide flex items-center gap-1.5 mb-2">
@@ -139,7 +154,7 @@ function SettingsSidebar({ onClose }: { onClose: () => void }) {
             </h4>
             <div className="flex flex-col gap-2">
               <Button
-                onClick={handleNavigateToAccount}
+                onClick={() => handleNavigateToAccount()}
                 variant="secondary"
                 className="w-full h-11 text-xs font-bold flex items-center justify-start gap-3 px-4 bg-surface/80 border border-border/80 hover:bg-surface-hover hover:border-border text-text-secondary transition-all rounded-xl"
               >
@@ -147,12 +162,20 @@ function SettingsSidebar({ onClose }: { onClose: () => void }) {
                 <span>{t("usernameChangeTitle")}</span>
               </Button>
               <Button
-                onClick={handleNavigateToAccount}
+                onClick={() => handleNavigateToAccount()}
                 variant="secondary"
                 className="w-full h-11 text-xs font-bold flex items-center justify-start gap-3 px-4 bg-surface/80 border border-border/80 hover:bg-surface-hover hover:border-border text-text-secondary transition-all rounded-xl"
               >
                 <KeyRound className="w-4 h-4 text-emerald-400" />
                 <span>{t("passwordChangeTitle")}</span>
+              </Button>
+              <Button
+                onClick={() => handleNavigateToAccount("#login-history")}
+                variant="secondary"
+                className="w-full h-11 text-xs font-bold flex items-center justify-start gap-3 px-4 bg-surface/80 border border-border/80 hover:bg-surface-hover hover:border-border text-text-secondary transition-all rounded-xl"
+              >
+                <History className="w-4 h-4 text-emerald-400" />
+                <span>{t("loginHistory")}</span>
               </Button>
             </div>
           </div>

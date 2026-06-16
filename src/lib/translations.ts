@@ -187,6 +187,16 @@ export const translations = {
     calcFeedPerCow: "দৈনিক খাদ্য প্রতি গরু (কেজি)",
     calcMonthlyReq: "মাসিক মোট প্রয়োজন (কেজি)",
     calcDailyFeedReq: "দৈনিক মোট প্রয়োজন (কেজি)",
+    loginHistory: "লগইন ইতিহাস",
+    activeSessions: "সক্রিয় লগইন সেশনসমূহ",
+    sessionDevice: "ডিভাইস ও ব্রাউজার",
+    sessionIp: "আইপি অ্যাড্রেস",
+    sessionLoginTime: "লগইন করার সময়",
+    sessionStatus: "অবস্থা",
+    sessionCurrent: "চলতি ডিভাইস (Active)",
+    sessionOther: "অন্যান্য ডিভাইস",
+    sessionLogoutBtn: "ডিভাইস লগআউট",
+    sessionConfirmLogout: "আপনি কি নিশ্চিতভাবে এই ডিভাইস থেকে লগআউট করতে চান?",
   },
   en: {
     // General / Common
@@ -372,5 +382,15 @@ export const translations = {
     calcFeedPerCow: "Daily Feed per Cow (kg)",
     calcMonthlyReq: "Monthly Total (kg)",
     calcDailyFeedReq: "Daily Total (kg)",
+    loginHistory: "Login History",
+    activeSessions: "Active Login Sessions",
+    sessionDevice: "Device & Browser",
+    sessionIp: "IP Address",
+    sessionLoginTime: "Logged in at",
+    sessionStatus: "Status",
+    sessionCurrent: "Current Device (Active)",
+    sessionOther: "Other Device",
+    sessionLogoutBtn: "Log Out Device",
+    sessionConfirmLogout: "Are you sure you want to log out this device?",
   }
 };
