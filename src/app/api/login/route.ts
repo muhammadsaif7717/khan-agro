@@ -5,7 +5,7 @@ import bcrypt from "bcryptjs";
 
 export async function POST(request: Request) {
   try {
-    const { username, password } = await request.json();
+    const { username, password, logoutAll } = await request.json();
     if (!username || !password) {
       return NextResponse.json({ success: false, message: "Missing credentials" }, { status: 400 });
     }
@@ -25,14 +25,18 @@ export async function POST(request: Request) {
     const passwordMatch = await bcrypt.compare(password, String(adminDoc.password));
 
     if (usernameMatch && passwordMatch) {
-      // Check session limit (max 3 concurrent active sessions)
-      const activeSessionsCount = await db.collection("sessions").countDocuments({});
-      if (activeSessionsCount >= 3) {
-        return NextResponse.json({ 
-          success: false, 
-          limitReached: true, 
-          message: "নিরাপত্তাজনিত কারণে ৩টির বেশি ডিভাইসে একসাথে লগইন করা সম্ভব নয়। দয়া করে অন্য কোনো ডিভাইস থেকে লগআউট করুন।" 
-        }, { status: 403 });
+      if (logoutAll) {
+        await db.collection("sessions").deleteMany({});
+      } else {
+        // Check session limit (max 3 concurrent active sessions)
+        const activeSessionsCount = await db.collection("sessions").countDocuments({});
+        if (activeSessionsCount >= 3) {
+          return NextResponse.json({ 
+            success: false, 
+            limitReached: true, 
+            message: "নিরাপত্তাজনিত কারণে ৩টির বেশি ডিভাইসে একসাথে লগইন করা সম্ভব নয়। দয়া করে অন্য কোনো ডিভাইস থেকে লগআউট করুন।" 
+          }, { status: 403 });
+        }
       }
 
       const sessionId = "session_" + Math.random().toString(36).substring(2, 15);

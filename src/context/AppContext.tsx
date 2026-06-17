@@ -30,7 +30,7 @@ interface AppContextValue {
   // Auth
   isAuthenticated: boolean;
   setIsAuthenticated: (val: boolean) => void;
-  login: (username: string, password: string) => Promise<boolean>;
+  login: (username: string, password: string, logoutAll?: boolean) => Promise<{ success: boolean; limitReached?: boolean; message?: string }>;
   logout: () => void;
 
   // Theme
@@ -361,24 +361,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // ── Auth ───────────────────────────────────────────────────────────────────
   const login = useCallback(
-    async (username: string, password: string): Promise<boolean> => {
+    async (username: string, password: string, logoutAll?: boolean): Promise<{ success: boolean; limitReached?: boolean; message?: string }> => {
       try {
         const res = await fetch("/api/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username: username.trim(), password }),
+          body: JSON.stringify({ username: username.trim(), password, logoutAll }),
         });
         const data = await res.json();
         
         if (data.success && data.hashes) {
           localStorage.setItem("auth_hashes", JSON.stringify(data.hashes));
           setIsAuthenticated(true);
-          return true;
+          return { success: true };
         }
+
+        return {
+          success: false,
+          limitReached: data.limitReached || false,
+          message: data.message || ""
+        };
       } catch (err) {
         console.error("Login Error:", err);
+        return { success: false, message: "Network error" };
       }
-      return false;
     },
     []
   );

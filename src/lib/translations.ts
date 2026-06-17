@@ -39,6 +39,7 @@ export const translations = {
     loggingIn: "প্রবেশ হচ্ছে...",
     loginErrorEmpty: "ব্যবহারকারী নাম ও পাসওয়ার্ড দিন!",
     loginErrorInvalid: "ভুল ব্যবহারকারী নাম অথবা পাসওয়ার্ড",
+    forceLogoutAndLogin: "অন্যান্য ডিভাইস থেকে লগআউট করে প্রবেশ করুন",
     copyright: "খান এগ্রো খামার ব্যবস্থাপনা সিস্টেম © ২০২৬",
     dbLoading: "খামার ডাটাবেজ লোড হচ্ছে...",
 
@@ -234,6 +235,7 @@ export const translations = {
     loggingIn: "Signing in...",
     loginErrorEmpty: "Please enter your username and password!",
     loginErrorInvalid: "Incorrect username or password",
+    forceLogoutAndLogin: "Log out other devices & Sign in",
     copyright: "Khan Agro Farm Management System © 2026",
     dbLoading: "Loading Farm Database...",
 
