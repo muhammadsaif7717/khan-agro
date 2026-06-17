@@ -345,7 +345,7 @@ export const translations = {
     withdrawConfirm: "Confirm Withdrawal",
 
     addInvestment: "Add Investment",
-    investmentPlaceholder: "e.g., Saifur Rahman, Abdul Khaleq etc...",
+    investmentPlaceholder: "e.g., Shoaib Khan...",
     investmentConfirm: "Confirm Investment",
 
     addReinvestment: "Add Re-investment",
