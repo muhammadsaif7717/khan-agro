@@ -102,7 +102,7 @@ export default function AccountPage() {
     reader.onload = async (evt) => {
       const text = evt.target?.result as string;
       if (!text) {
-        setImportMsg({ text: "❌ ফাইলটি খালি!", ok: false });
+        setImportMsg({ text: t("importErrorEmpty"), ok: false });
         setImportLoading(false);
         return;
       }
@@ -111,7 +111,7 @@ export default function AccountPage() {
       setImportLoading(false);
     };
     reader.onerror = () => {
-      setImportMsg({ text: "❌ ফাইল পড়তে সমস্যা হয়েছে!", ok: false });
+      setImportMsg({ text: t("importErrorRead"), ok: false });
       setImportLoading(false);
     };
     reader.readAsText(file);

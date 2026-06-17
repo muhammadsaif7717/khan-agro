@@ -40,6 +40,7 @@ export const translations = {
     loginErrorEmpty: "ব্যবহারকারী নাম ও পাসওয়ার্ড দিন!",
     loginErrorInvalid: "ভুল ব্যবহারকারী নাম অথবা পাসওয়ার্ড",
     forceLogoutAndLogin: "অন্যান্য ডিভাইস থেকে লগআউট করে প্রবেশ করুন",
+    loginErrorLimitReached: "নিরাপত্তাজনিত কারণে ৩টির বেশি ডিভাইসে একসাথে লগইন করা সম্ভব নয়। দয়া করে অন্য কোনো ডিভাইস থেকে লগআউট করুন।",
     copyright: "খান এগ্রো খামার ব্যবস্থাপনা সিস্টেম © ২০২৬",
     dbLoading: "খামার ডাটাবেজ লোড হচ্ছে...",
 
@@ -101,6 +102,8 @@ export const translations = {
     importButton: "আমদানি করুন",
     importSuccess: "✅ ব্যাকআপ পুনরুদ্ধার সফল হয়েছে!",
     importErrorFormat: "❌ ফাইলের ফরম্যাট সঠিক নয়!",
+    importErrorEmpty: "❌ ফাইলটি খালি!",
+    importErrorRead: "❌ ফাইল পড়তে সমস্যা হয়েছে!",
 
     usernameChangeTitle: "ব্যবহারকারী নাম পরিবর্তন",
     newUsernamePlaceholder: "নতুন ব্যবহারকারী নাম",
@@ -236,6 +239,7 @@ export const translations = {
     loginErrorEmpty: "Please enter your username and password!",
     loginErrorInvalid: "Incorrect username or password",
     forceLogoutAndLogin: "Log out other devices & Sign in",
+    loginErrorLimitReached: "For security reasons, you cannot log in to more than 3 devices at the same time. Please log out from another device.",
     copyright: "Khan Agro Farm Management System © 2026",
     dbLoading: "Loading Farm Database...",
 
@@ -297,6 +301,8 @@ export const translations = {
     importButton: "Import",
     importSuccess: "✅ Backup restored successfully!",
     importErrorFormat: "❌ Invalid file format!",
+    importErrorEmpty: "❌ File is empty!",
+    importErrorRead: "❌ Error reading file!",
 
     usernameChangeTitle: "Change Username",
     newUsernamePlaceholder: "New Username",

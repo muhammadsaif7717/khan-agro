@@ -3,12 +3,17 @@ import clientPromise, { dbName } from "@/lib/db";
 import bcrypt from "bcryptjs";
 
 export async function PUT(request: Request) {
+  let requestLang = "bn";
   try {
     const body = await request.json();
-    const { oldPassword, newUsername, newPassword } = body;
+    const { oldPassword, newUsername, newPassword, language } = body;
+    if (language) {
+      requestLang = language;
+    }
     
     if (!oldPassword) {
-      return NextResponse.json({ success: false, error: "বর্তমান পাসওয়ার্ড আবশ্যক!" }, { status: 400 });
+      const err = requestLang === "en" ? "Current password is required!" : "বর্তমান পাসওয়ার্ড আবশ্যক!";
+      return NextResponse.json({ success: false, error: err }, { status: 400 });
     }
 
     const client = await clientPromise;
@@ -18,13 +23,15 @@ export async function PUT(request: Request) {
     const adminDoc = await db.collection("admin").findOne({});
     
     if (!adminDoc) {
-      return NextResponse.json({ success: false, error: "অ্যাডমিন পাওয়া যায়নি!" }, { status: 404 });
+      const err = requestLang === "en" ? "Admin not found!" : "অ্যাডমিন পাওয়া যায়নি!";
+      return NextResponse.json({ success: false, error: err }, { status: 404 });
     }
 
     // Verify the old password before allowing changes
     const isOldPasswordCorrect = await bcrypt.compare(oldPassword, String(adminDoc.password));
     if (!isOldPasswordCorrect) {
-      return NextResponse.json({ success: false, error: "বর্তমান পাসওয়ার্ড ভুল!" }, { status: 401 });
+      const err = requestLang === "en" ? "Incorrect current password!" : "বর্তমান পাসওয়ার্ড ভুল!";
+      return NextResponse.json({ success: false, error: err }, { status: 401 });
     }
 
     // Prepare updates
@@ -49,9 +56,10 @@ export async function PUT(request: Request) {
     // Fetch the updated doc to return the new hashes
     const updatedAdminDoc = await db.collection("admin").findOne({ _id: adminDoc._id });
     
+    const msg = requestLang === "en" ? "Credentials updated successfully!" : "ক্রেডেনশিয়ালস পরিবর্তন সফল হয়েছে!";
     return NextResponse.json({ 
       success: true, 
-      message: "ক্রেডেনশিয়ালস পরিবর্তন সফল হয়েছে!",
+      message: msg,
       hashes: {
         username: updatedAdminDoc?.username,
         password: updatedAdminDoc?.password
@@ -59,6 +67,7 @@ export async function PUT(request: Request) {
     });
   } catch (error: unknown) {
     console.error("PUT /api/credentials error:", error);
-    return NextResponse.json({ success: false, error: "সার্ভার এরর" }, { status: 500 });
+    const err = requestLang === "en" ? "Server error" : "সার্ভার এরর";
+    return NextResponse.json({ success: false, error: err }, { status: 500 });
   }
 }

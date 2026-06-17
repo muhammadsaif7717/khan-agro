@@ -4,10 +4,15 @@ import clientPromise, { dbName } from "@/lib/db";
 import bcrypt from "bcryptjs";
 
 export async function POST(request: Request) {
+  let requestLang = "bn";
   try {
-    const { username, password, logoutAll } = await request.json();
+    const { username, password, logoutAll, language } = await request.json();
+    if (language) {
+      requestLang = language;
+    }
     if (!username || !password) {
-      return NextResponse.json({ success: false, message: "Missing credentials" }, { status: 400 });
+      const err = requestLang === "en" ? "Please enter your username and password!" : "ব্যবহারকারী নাম ও পাসওয়ার্ড দিন!";
+      return NextResponse.json({ success: false, message: err }, { status: 400 });
     }
 
     const client = await clientPromise;
@@ -31,10 +36,13 @@ export async function POST(request: Request) {
         // Check session limit (max 3 concurrent active sessions)
         const activeSessionsCount = await db.collection("sessions").countDocuments({});
         if (activeSessionsCount >= 3) {
+          const limitMsg = requestLang === "en"
+            ? "For security reasons, you cannot log in to more than 3 devices at the same time. Please log out from another device."
+            : "নিরাপত্তাজনিত কারণে ৩টির বেশি ডিভাইসে একসাথে লগইন করা সম্ভব নয়। দয়া করে অন্য কোনো ডিভাইস থেকে লগআউট করুন।";
           return NextResponse.json({ 
             success: false, 
             limitReached: true, 
-            message: "নিরাপত্তাজনিত কারণে ৩টির বেশি ডিভাইসে একসাথে লগইন করা সম্ভব নয়। দয়া করে অন্য কোনো ডিভাইস থেকে লগআউট করুন।" 
+            message: limitMsg 
           }, { status: 403 });
         }
       }
@@ -75,11 +83,13 @@ export async function POST(request: Request) {
         }
       });
     } else {
-      return NextResponse.json({ success: false, message: "Invalid credentials" }, { status: 401 });
+      const err = requestLang === "en" ? "Incorrect username or password" : "ভুল ব্যবহারকারী নাম অথবা পাসওয়ার্ড";
+      return NextResponse.json({ success: false, message: err }, { status: 401 });
     }
   } catch (error: unknown) {
     console.error("POST /api/login error:", error);
-    return NextResponse.json({ success: false, message: "Server error" }, { status: 500 });
+    const err = requestLang === "en" ? "Server error" : "সার্ভারে সমস্যা হয়েছে!";
+    return NextResponse.json({ success: false, message: err }, { status: 500 });
   }
 }
 

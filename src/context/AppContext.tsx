@@ -366,7 +366,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const res = await fetch("/api/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username: username.trim(), password, logoutAll }),
+          body: JSON.stringify({ username: username.trim(), password, logoutAll, language }),
         });
         const data = await res.json();
         
@@ -386,7 +386,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return { success: false, message: "Network error" };
       }
     },
-    []
+    [language]
   );
 
   const logout = useCallback(async () => {
@@ -583,47 +583,47 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // ── Settings & Credentials ──────────────────────────────────────────────────
   const changeUsername = async (newUser: string, pass: string) => {
-    if (!pass) return { ok: false, msg: "❌ বর্তমান পাসওয়ার্ড আবশ্যক!" };
-    if (!newUser.trim() || newUser.length < 3) return { ok: false, msg: "❌ ইউজারনেম কমপক্ষে ৩ অক্ষরের হতে হবে!" };
+    if (!pass) return { ok: false, msg: t("errCurrentPassRequired") };
+    if (!newUser.trim() || newUser.length < 3) return { ok: false, msg: t("errUsernameMinLen") };
 
     try {
       const res = await fetch("/api/credentials", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ newUsername: newUser.trim(), oldPassword: pass }),
+        body: JSON.stringify({ newUsername: newUser.trim(), oldPassword: pass, language }),
       });
       const data = await res.json();
       if (data.success) {
         if (data.hashes) localStorage.setItem("auth_hashes", JSON.stringify(data.hashes));
-        return { ok: true, msg: "✅ ইউজারনেম পরিবর্তন সফল হয়েছে!" };
+        return { ok: true, msg: t("usernameChangeSuccess") };
       } else {
-        return { ok: false, msg: data.error || "❌ সার্ভার এরর!" };
+        return { ok: false, msg: data.error || t("errServer") };
       }
     } catch {
-      return { ok: false, msg: "❌ নেটওয়ার্ক এরর!" };
+      return { ok: false, msg: t("errNetwork") };
     }
   };
 
   const changePassword = async (oldPass: string, newPass: string, confirmNewPass: string) => {
-    if (!oldPass) return { ok: false, msg: "❌ বর্তমান পাসওয়ার্ড আবশ্যক!" };
-    if (newPass !== confirmNewPass) return { ok: false, msg: "❌ নতুন পাসওয়ার্ড মিলছে না!" };
-    if (newPass.length < 4) return { ok: false, msg: "❌ পাসওয়ার্ড কমপক্ষে ৪ অক্ষরের হতে হবে!" };
+    if (!oldPass) return { ok: false, msg: t("errCurrentPassRequired") };
+    if (newPass !== confirmNewPass) return { ok: false, msg: t("errPasswordMismatch") };
+    if (newPass.length < 4) return { ok: false, msg: t("errPasswordMinLen") };
 
     try {
       const res = await fetch("/api/credentials", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ newPassword: newPass, oldPassword: oldPass }),
+        body: JSON.stringify({ newPassword: newPass, oldPassword: oldPass, language }),
       });
       const data = await res.json();
       if (data.success) {
         if (data.hashes) localStorage.setItem("auth_hashes", JSON.stringify(data.hashes));
-        return { ok: true, msg: "✅ পাসওয়ার্ড পরিবর্তন সফল হয়েছে!" };
+        return { ok: true, msg: t("passwordChangeSuccess") };
       } else {
-        return { ok: false, msg: data.error || "❌ সার্ভার এরর!" };
+        return { ok: false, msg: data.error || t("errServer") };
       }
     } catch {
-      return { ok: false, msg: "❌ নেটওয়ার্ক এরর!" };
+      return { ok: false, msg: t("errNetwork") };
     }
   };
 
@@ -669,9 +669,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         Array.isArray(d.calcHistory) ? d.calcHistory : calcHistory
       );
       
-      return { ok: true, msg: "✅ ব্যাকআপ রিস্টোর সফল হয়েছে!" };
+      return { ok: true, msg: t("importSuccess") };
     } catch {
-      return { ok: false, msg: "❌ JSON ফরম্যাট সঠিক নয়!" };
+      return { ok: false, msg: t("importErrorFormat") };
     }
   };
 
